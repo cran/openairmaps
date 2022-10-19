@@ -1,165 +1,230 @@
 #' Check input & prep data
 #' @author David Carslaw
-#' @importFrom lubridate dst
 #' @noRd
-
-checkMapPrep <- function(mydata, Names, type, remove.calm = TRUE, remove.neg = TRUE, wd = "wd") {
-
-  ## deal with conditioning variable if present, if user-defined, must exist in data
-  ## pre-defined types
-  ## existing conditioning variables that only depend on date (which is checked)
-  conds <- c(
-    "default", "year", "hour", "month", "season", "weekday", "week",
-    "weekend", "monthyear", "gmtbst", "bstgmt", "dst", "daylight",
-    "yearseason", "seasonyear"
-  )
-  all.vars <- unique(c(names(mydata), conds))
-
-  varNames <- c(Names, type) ## names we want to be there
-  matching <- varNames %in% all.vars
-
-  if (any(!matching)) {
-    ## not all variables are present
-    stop(
-      "Can't find the variable(s): ",
-      paste(varNames[!matching], collapse = ", "), "\n"
+checkMapPrep <-
+  function(mydata,
+           Names,
+           remove.calm = TRUE,
+           remove.neg = TRUE,
+           wd = "wd") {
+    ## deal with conditioning variable if present, if user-defined, must exist in data
+    ## pre-defined types
+    ## existing conditioning variables that only depend on date (which is checked)
+    conds <- c(
+      "default",
+      "year",
+      "hour",
+      "month",
+      "season",
+      "weekday",
+      "week",
+      "weekend",
+      "monthyear",
+      "gmtbst",
+      "bstgmt",
+      "dst",
+      "daylight",
+      "yearseason",
+      "seasonyear"
     )
-  }
+    all.vars <- unique(c(names(mydata), conds))
 
-  ## add type to names if not in pre-defined list
-  if (any(type %in% conds == FALSE)) {
-    ids <- which(type %in% conds == FALSE)
-    Names <- c(Names, type[ids])
-  }
+    varNames <- c(Names) ## names we want to be there
+    matching <- varNames %in% all.vars
 
-  ## if type already present in data frame
-  if (any(type %in% names(mydata))) {
-    ids <- which(type %in% names(mydata))
-    Names <- unique(c(Names, type[ids]))
-  }
-
-  ## just select data needed
-  mydata <- mydata[, Names]
-
-  ## if site is in the data set, check none are missing
-  ## seems to be a problem for some KCL data...
-  if ("site" %in% names(mydata)) { ## split by site
-
-    ## remove any NA sites
-    if (anyNA(mydata$site)) {
-      id <- which(is.na(mydata$site))
-      mydata <- mydata[-id, ]
+    if (any(!matching)) {
+      ## not all variables are present
+      stop(
+        "Can't find the variable(s): ",
+        paste(varNames[!matching], collapse = ", "),
+        "\n"
+      )
     }
-  }
+
+    ## just select data needed
+    mydata <- mydata[, Names]
+
+    ## if site is in the data set, check none are missing
+    ## seems to be a problem for some KCL data...
+    if ("site" %in% names(mydata)) {
+      ## split by site
+
+      ## remove any NA sites
+      if (anyNA(mydata$site)) {
+        id <- which(is.na(mydata$site))
+        mydata <- mydata[-id, ]
+      }
+    }
 
 
-  ## sometimes ratios are considered which can results in infinite values
-  ## make sure all infinite values are set to NA
-  mydata[] <- lapply(mydata, function(x) {
-    replace(x, x == Inf | x == -Inf, NA)
-  })
+    ## sometimes ratios are considered which can results in infinite values
+    ## make sure all infinite values are set to NA
+    mydata[] <- lapply(mydata, function(x) {
+      replace(x, x == Inf | x == -Inf, NA)
+    })
 
-  if ("ws" %in% Names) {
-    if ("ws" %in% Names & is.numeric(mydata$ws)) {
-
-      ## check for negative wind speeds
-      if (any(sign(mydata$ws[!is.na(mydata$ws)]) == -1)) {
-        if (remove.neg) { ## remove negative ws only if TRUE
-          warning("Wind speed <0; removing negative data")
-          mydata$ws[mydata$ws < 0] <- NA
+    if ("ws" %in% Names) {
+      if ("ws" %in% Names & is.numeric(mydata$ws)) {
+        ## check for negative wind speeds
+        if (any(sign(mydata$ws[!is.na(mydata$ws)]) == -1)) {
+          if (remove.neg) {
+            ## remove negative ws only if TRUE
+            warning("Wind speed <0; removing negative data")
+            mydata$ws[mydata$ws < 0] <- NA
+          }
         }
       }
     }
-  }
 
-  ## round wd to make processing obvious
-  ## data already rounded to nearest 10 degress will not be affected
-  ## data not rounded will be rounded to nearest 10 degrees
-  ## assumes 10 is average of 5-15 etc
-  if (wd %in% Names) {
-    if (wd %in% Names & is.numeric(mydata[, wd])) {
-
-      ## check for wd <0 or > 360
-      if (any(sign(mydata[[wd]][!is.na(mydata[[wd]])]) == -1 |
-        mydata[[wd]][!is.na(mydata[[wd]])] > 360)) {
-        warning("Wind direction < 0 or > 360; removing these data")
-        mydata[[wd]][mydata[[wd]] < 0] <- NA
-        mydata[[wd]][mydata[[wd]] > 360] <- NA
-      }
-
-      if (remove.calm) {
-        if ("ws" %in% names(mydata)) {
-          mydata[[wd]][mydata$ws == 0] <- NA ## set wd to NA where there are calms
-          mydata$ws[mydata$ws == 0] <- NA ## remove calm ws
+    ## round wd to make processing obvious
+    ## data already rounded to nearest 10 degress will not be affected
+    ## data not rounded will be rounded to nearest 10 degrees
+    ## assumes 10 is average of 5-15 etc
+    if (wd %in% Names) {
+      if (wd %in% Names & is.numeric(mydata[, wd])) {
+        ## check for wd <0 or > 360
+        if (any(sign(mydata[[wd]][!is.na(mydata[[wd]])]) == -1 |
+          mydata[[wd]][!is.na(mydata[[wd]])] > 360)) {
+          warning("Wind direction < 0 or > 360; removing these data")
+          mydata[[wd]][mydata[[wd]] < 0] <- NA
+          mydata[[wd]][mydata[[wd]] > 360] <- NA
         }
-        mydata[[wd]][mydata[[wd]] == 0] <- 360 ## set any legitimate wd to 360
 
-        ## round wd for use in functions - except windRose/pollutionRose
-        mydata[[wd]] <- 10 * ceiling(mydata[[wd]] / 10 - 0.5)
-        mydata[[wd]][mydata[[wd]] == 0] <- 360 # angles <5 should be in 360 bin
+        if (remove.calm) {
+          if ("ws" %in% names(mydata)) {
+            mydata[[wd]][mydata$ws == 0] <-
+              NA ## set wd to NA where there are calms
+            mydata$ws[mydata$ws == 0] <- NA ## remove calm ws
+          }
+          mydata[[wd]][mydata[[wd]] == 0] <-
+            360 ## set any legitimate wd to 360
+
+          ## round wd for use in functions - except windRose/pollutionRose
+          mydata[[wd]] <- 10 * ceiling(mydata[[wd]] / 10 - 0.5)
+          mydata[[wd]][mydata[[wd]] == 0] <-
+            360 # angles <5 should be in 360 bin
+        }
+        mydata[[wd]][mydata[[wd]] == 0] <-
+          360 ## set any legitimate wd to 360
       }
-      mydata[[wd]][mydata[[wd]] == 0] <- 360 ## set any legitimate wd to 360
     }
+
+
+    ## make sure date is ordered in time if present
+    if ("date" %in% Names) {
+      if ("POSIXlt" %in% class(mydata$date)) {
+        stop("date should be in POSIXct format not POSIXlt")
+      }
+
+      ## try and work with a factor date - but probably a problem in original data
+      if (is.factor(mydata$date)) {
+        warning("date field is a factor, check date format")
+        mydata$date <- as.POSIXct(mydata$date, "GMT")
+      }
+
+      mydata <- dplyr::arrange(mydata, date)
+
+      ## make sure date is the first field
+      if (names(mydata)[1] != "date") {
+        mydata <- mydata[c("date", setdiff(names(mydata), "date"))]
+      }
+
+      ## check to see if there are any missing dates, stop if there are
+      ids <- which(is.na(mydata$date))
+      if (length(ids) > 0) {
+        mydata <- mydata[-ids, ]
+        warning(paste(
+          "Missing dates detected, removing",
+          length(ids), "lines"
+        ),
+        call. = FALSE
+        )
+      }
+
+      ## daylight saving time can cause terrible problems - best avoided!!
+
+      if (any(lubridate::dst(mydata$date))) {
+        message("Detected data with Daylight Saving Time.")
+      }
+    }
+
+    ## return data frame
+    return(mydata)
   }
 
-
-  ## make sure date is ordered in time if present
-  if ("date" %in% Names) {
-    if ("POSIXlt" %in% class(mydata$date)) {
-      stop("date should be in POSIXct format not POSIXlt")
-    }
-
-    ## try and work with a factor date - but probably a problem in original data
-    if (is.factor(mydata$date)) {
-      warning("date field is a factor, check date format")
-      mydata$date <- as.POSIXct(mydata$date, "GMT")
-    }
-
-    mydata <- dplyr::arrange(mydata, date)
-
-    ## make sure date is the first field
-    if (names(mydata)[1] != "date") {
-      mydata <- mydata[c("date", setdiff(names(mydata), "date"))]
-    }
-
-    ## check to see if there are any missing dates, stop if there are
-    ids <- which(is.na(mydata$date))
-    if (length(ids) > 0) {
-      mydata <- mydata[-ids, ]
-      warning(paste(
-        "Missing dates detected, removing",
-        length(ids), "lines"
-      ), call. = FALSE)
-    }
-
-    ## daylight saving time can cause terrible problems - best avoided!!
-
-    if (any(dst(mydata$date))) {
-      message("Detected data with Daylight Saving Time.")
-    }
+#' Prep data for mapping
+#' @noRd
+prepMapData <- function(data, pollutant, control, ..., .to_narrow = TRUE) {
+  # check pollutant is there
+  if (is.null(pollutant)) {
+    cli::cli_abort(c(
+      "x" = "{.code pollutant} is missing with no default.",
+      "i" = "Please provide a column of {.code data} which represents the pollutant(s) of interest."
+    ))
   }
 
-  ## return data frame
-  return(mydata)
+  ## extract variables of interest
+  vars <- unique(c(pollutant, control, ...))
+
+  # check and select variables
+  data <- checkMapPrep(data, vars)
+
+  # check to see if variables exist in data
+  if (length(intersect(vars, names(data))) != length(vars)) {
+    stop(paste(vars[which(!vars %in% names(data))], "not found in data"), call. = FALSE)
+  }
+
+  # check if more than one pollutant & is.null split
+  if (length(pollutant) > 1 & !is.null(control)) {
+    cli::cli_warn(c(
+      "!" = "Multiple pollutants {.emph and} {.code control} option specified",
+      "i" = "Please only specify multiple pollutants {.emph or} a {.code control} option",
+      "i" = "Defaulting to splitting by {.code pollutant}"
+    ))
+  }
+
+  if (.to_narrow) {
+    # pollutants to long
+    data <-
+      tidyr::pivot_longer(
+        data = data,
+        cols = dplyr::all_of(pollutant),
+        names_to = "pollutant_name",
+        values_to = "conc"
+      )
+
+    # make pollutant names factors
+    data <-
+      dplyr::mutate(
+        .data = data,
+        pollutant_name = as.factor(.data$pollutant_name)
+      )
+  }
+
+  return(data)
 }
+
 
 #' Save an openair plot as a temp image to use as an icon
 #' @noRd
-
 save_icon_image <-
   function(data,
            fun,
            dir,
            pollutant,
-           type,
+           split,
+           lat,
+           lon,
            cols,
            alpha,
            key,
            fig.width,
            fig.height,
            ...) {
-    png(
-      filename = paste0(dir, "/", data[[type]][1], "_", pollutant, ".png"),
+    id <- paste0(data[[lat]][1], data[[lon]][1])
+
+    grDevices::png(
+      filename = paste0(dir, "/", id, "_", split, ".png"),
       width = fig.width * 300,
       height = fig.height * 300,
       res = 300,
@@ -176,17 +241,18 @@ save_icon_image <-
       ...
     )
 
-    dev.off()
+    grDevices::dev.off()
   }
 
 #' Save all openair plots as images and read as leaflet icons
 #' @noRd
-
 create_icons <-
   function(data,
            fun,
            pollutant,
-           type,
+           split,
+           lat,
+           lon,
            cols,
            alpha,
            key,
@@ -198,15 +264,20 @@ create_icons <-
     # where to write files
     icon_dir <- tempdir()
 
+    # drop missing data
+    data <- tidyr::drop_na(data, .data[[pollutant]])
+
     # go through all sites and make some plot
     data %>%
-      dplyr::group_split(dplyr::across(dplyr::all_of(type))) %>%
+      dplyr::group_split(.data[[lat]], .data[[lon]]) %>%
       purrr::walk(
         .f = ~ save_icon_image(
           fun = fun,
           dir = icon_dir,
           pollutant = pollutant,
-          type = type,
+          split = split,
+          lat = lat,
+          lon = lon,
           cols = cols,
           alpha = alpha,
           key = key,
@@ -216,107 +287,163 @@ create_icons <-
         )
       )
 
+    dat2 <- dplyr::mutate(data, id = paste0(.data[[lat]], .data[[lon]]))
+
     # definition of 'icons' aka the openair plots
     leafIcons <-
       lapply(sort(paste0(
-        icon_dir, "/", unique(data[[type]]), "_", pollutant, ".png"
+        icon_dir, "/", unique(dat2$id), "_", split, ".png"
       )),
       leaflet::makeIcon,
       iconWidth = iconWidth,
       iconHeight = iconHeight
       )
-    names(leafIcons) <- unique(data[[type]])
+    names(leafIcons) <- unique(dat2$id)
     class(leafIcons) <- "leaflet_icon_set"
 
     leafIcons
   }
 
-#' Prep data for mapping
-#' @noRd
-
-prepMapData <- function(data, type, ...) {
-
-  ## extract variables of interest
-  vars <- c(...)
-
-  if (type != "default") {
-    vars <- c(vars, type)
-  }
-
-  # check and select variables
-  data <- checkMapPrep(data, vars, type = type)
-
-  # cut data
-  data <- openair::cutData(data, type)
-
-  # remove missing data
-  data <- na.omit(data)
-
-  # check to see if variables exist in data
-  if (length(intersect(vars, names(data))) != length(vars)) {
-    stop(paste(vars[which(!vars %in% names(data))], "not found in data"), call. = FALSE)
-  }
-
-  return(data)
-}
 
 #' Make a leaflet map
 #' @noRd
+makeMap <-
+  function(data,
+           icons,
+           provider,
+           longitude,
+           latitude,
+           split_col,
+           popup,
+           label) {
+    provider <- unique(provider)
 
-makeMap <- function(data, icons, provider, longitude, latitude, type, pollutant) {
-  provider <- unique(provider)
+    # data for plotting
+    plot_data <-
+      data %>%
+      dplyr::group_by(.data[[latitude]], .data[[longitude]], .data[[split_col]]) %>%
+      dplyr::mutate(dc = mean(!is.na(.data[[split_col]]))) %>%
+      dplyr::ungroup() %>%
+      dplyr::distinct(.data[[latitude]], .data[[longitude]], .data[[split_col]], .keep_all = TRUE) %>%
+      dplyr::arrange(.data[[latitude]], .data[[longitude]])
 
-  # data for plotting
-  plot_data <-
-    dplyr::group_by(data, .data[[type]]) %>%
-    dplyr::slice(n = 1) %>%
-    dplyr::arrange(.data[[type]])
+    # create leaflet map
+    m <- leaflet::leaflet()
 
-  # create leaflet map
-  m <- leaflet::leaflet(data = plot_data)
-
-  # add tiles
-  for (j in seq(length(provider))) {
-    m <- leaflet::addProviderTiles(
-      map = m,
-      provider = provider[j],
-      group = provider[j]
-    )
-  }
-
-  # add markers
-  for (i in seq(length(icons))) {
-    m <- leaflet::addMarkers(
-      m,
-      data = plot_data,
-      lng = plot_data[[longitude]],
-      lat = plot_data[[latitude]],
-      icon = icons[[i]],
-      popup = plot_data[[type]],
-      group = sort(pollutant)[[i]] %>% quickTextHTML()
-    )
-  }
-
-  # add layer control for pollutants/providers
-  if (length(pollutant) > 1 & length(provider) > 1) {
-    m <-
-      leaflet::addLayersControl(
-        m,
-        baseGroups = sort(pollutant) %>% purrr::map_chr(quickTextHTML),
-        overlayGroups = provider
+    # add tiles
+    for (j in seq(length(provider))) {
+      m <- leaflet::addProviderTiles(
+        map = m,
+        provider = provider[j],
+        group = provider[j]
       )
-  } else if (length(pollutant) > 1 & length(provider) == 1) {
-    m <- leaflet::addLayersControl(
-      m,
-      baseGroups = sort(pollutant) %>% purrr::map_chr(quickTextHTML)
-    )
-  } else if (length(provider) > 1 & length(pollutant) == 1) {
-    m <- leaflet::addLayersControl(
-      m,
-      baseGroups = provider
-    )
+    }
+
+    # add markers
+    for (i in names(icons)) {
+      plot_data_i <-
+        dplyr::filter(plot_data, .data[[split_col]] == i) %>%
+        dplyr::filter(.data$dc != 0)
+
+      if (!is.null(popup)) {
+        thePopup <- plot_data_i[[popup]]
+      } else {
+        thePopup <- popup
+      }
+
+      if (!is.null(label)) {
+        theLabel <- plot_data_i[[label]]
+      } else {
+        theLabel <- label
+      }
+
+      # only plot markers where there is data
+      m <- leaflet::addMarkers(
+        m,
+        data = plot_data_i,
+        lng = plot_data_i[[longitude]],
+        lat = plot_data_i[[latitude]],
+        icon = icons[[i]],
+        popup = thePopup,
+        label = theLabel,
+        group = i %>% quickTextHTML()
+      )
+    }
+
+    # add layer control for pollutants/providers
+    if (length(icons) > 1 & length(provider) > 1) {
+      m <-
+        leaflet::addLayersControl(
+          m,
+          baseGroups = names(icons) %>% purrr::map_chr(quickTextHTML),
+          overlayGroups = provider
+        )
+    } else if (length(icons) > 1 & length(provider) == 1) {
+      m <- leaflet::addLayersControl(m,
+        baseGroups = names(icons) %>% purrr::map_chr(quickTextHTML)
+      )
+    } else if (length(provider) > 1 & length(icons) == 1) {
+      m <- leaflet::addLayersControl(m,
+        baseGroups = provider
+      )
+    }
+
+    # return
+    return(m)
   }
 
-  # return
-  return(m)
+#' guess latlon
+#' @noRd
+assume_latlon <- function(data, latitude, longitude) {
+  guess_latlon <- function(data, latlon = c("lat", "lon")) {
+    x <- names(data)
+    if (latlon == "lat") {
+      name <- "latitude"
+      str <- c("latitude", "latitud", "lat")
+    } else if (latlon == "lon") {
+      name <- "longitude"
+      str <- c("longitude", "longitud", "lon", "long", "lng")
+    }
+    str <-
+      c(
+        str,
+        toupper(str),
+        tolower(str),
+        stringr::str_to_title(str)
+      )
+    id <- x %in% str
+    out <- x[id]
+    len <- length(out)
+    if (len > 1) {
+      cli::cli_abort("Cannot identify {name}: Multiple possible matches ({out})",
+        call = NULL
+      )
+      return(NULL)
+    } else if (len == 0) {
+      cli::cli_abort("Cannot identify {name}: No clear match.", call = NULL)
+      return(NULL)
+    } else {
+      cli::cli_alert_info("Assuming {name} is '{out}'")
+      return(out)
+    }
+  }
+
+  if (is.null(latitude) | is.null(longitude)) {
+    cli::cli_h1("Assuming Latitude and/or Longitude")
+    if (is.null(latitude)) {
+      latitude <- guess_latlon(data, "lat")
+    } else {
+      cli::cli_alert_success("Latitude provided as '{latitude}'")
+    }
+    if (is.null(longitude)) {
+      longitude <- guess_latlon(data, "lon")
+    } else {
+      cli::cli_alert_success("Latitude provided as '{longitude}'")
+    }
+  }
+
+  out <- list(
+    latitude = latitude,
+    longitude = longitude
+  )
 }

@@ -6,6 +6,8 @@
 <!-- badges: start -->
 
 [![R-CMD-check](https://github.com/davidcarslaw/openairmaps/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/davidcarslaw/openairmaps/actions/workflows/R-CMD-check.yaml)
+[![CRAN
+status](https://www.r-pkg.org/badges/version/openairmaps)](https://CRAN.R-project.org/package=openairmaps)
 <!-- badges: end -->
 
 The goal of `{openairmaps}` is to combine the robust analytical methods
@@ -14,13 +16,35 @@ highly capable `{leaflet}` package.
 
 ## Installation
 
-You can install the development version of `{openairmaps}` from
-[GitHub](https://github.com/) with:
+You can install the release version of `{openairmaps}` from CRAN with:
+
+``` r
+install.packages("openairmaps")
+```
+
+You can install the development version of `{openairmaps}` from GitHub
+with:
 
 ``` r
 # install.packages("devtools")
 devtools::install_github("davidcarslaw/openairmaps")
 ```
+
+## Network Visualisation
+
+`{openairmaps}` can easily visualise any of the air quality networks
+made available by `{openair}`. This opinionated function creates helpful
+popups for readers to learn more about the different sites, and can
+optionally employ a “layer control” menu to allow users to toggle on/off
+different site types, zones, pollutants, and so on.
+
+``` r
+library(openairmaps)
+networkMap(source = "aurn")
+```
+
+![A screenshot of `networkMap()`
+output.](man/figures/README-networkmap.png)
 
 ## Directional Analysis
 
@@ -37,7 +61,7 @@ library(openairmaps)
 
 polarMap(
   polar_data, 
-  type = "site"
+  pollutant = "nox"
 )
 ```
 
@@ -53,8 +77,7 @@ library(openairmaps)
 annulusMap(
   polar_data,
   pollutant = c("no2", "nox"),
-  provider = c("CartoDB.Positron", "OpenStreetMap"),
-  type = "site"
+  provider = c("CartoDB.Positron", "OpenStreetMap")
 )
 ```
 
@@ -70,8 +93,7 @@ library(openairmaps)
 polarMap(
   polar_data,
   pollutant = c("no2", "nox"),
-  provider = c("CartoDB.Positron", "OpenStreetMap"),
-  type = "site"
+  provider = c("CartoDB.Positron", "OpenStreetMap")
 ) %>%
   leaflet::popupOptions(...) %>%
   leaflet::mapOptions(...) # etc.
@@ -100,7 +122,6 @@ leaflet() %>%
     data = polar_data,
     fun = openair::windRose,
     pollutant = "ws",
-    type = "site",
     group = "Wind Rose"
   ) %>%
   addPolarMarkers(
@@ -109,7 +130,6 @@ leaflet() %>%
     data = polar_data,
     fun = openair::polarPlot,
     pollutant = "nox",
-    type = "site",
     group = quickTextHTML("NOx Polar Plot")
   ) %>%
   addLayersControl(baseGroups = quickTextHTML(c("Wind Rose", "NOx Polar Plot")))

@@ -3,6 +3,8 @@
 #' This function plots back trajectories on a \code{leaflet} map. This function
 #' requires that data are imported using the [openair::importTraj()] function.
 #'
+#' @seealso Trajectory maps: [trajMap()], [trajLevelMap()].
+#'
 #' @param data Data frame, the result of importing a trajectory file using
 #'   [openair::importTraj()].
 #' @param longitude Column containing the longitude, as a decimal.
@@ -32,11 +34,13 @@
 #'   below \code{min.bin} are set as missing.
 #' @param cols Colours to be used for plotting. Options include
 #'   \dQuote{default}, \dQuote{increment}, \dQuote{heat}, \dQuote{jet} and
-#'   [RColorBrewer::brewer.pal()] colours — see the [openair::openColours()]
+#'   \code{RColorBrewer} colours — see the [openair::openColours()]
 #'   function for more details. For user defined the user can supply a list of
 #'   colour names recognised by R (type [grDevices::colours()] to see the full
 #'   list). An example would be \code{cols = c("yellow", "green", "blue")}.
 #' @param alpha Opacity of the tiles. Must be between \code{0} and \code{1}.
+#' @param tile.border Colour to use for the border of binned tiles. Defaults to
+#'   \code{NA}, which draws no border.
 #' @param provider The base map(s) to be used. See
 #'   \url{http://leaflet-extras.github.io/leaflet-providers/preview/} for a list
 #'   of all base maps that can be used. If multiple base maps are provided, they
@@ -54,7 +58,7 @@ trajLevelMap <-
   function(data,
            longitude = "lon",
            latitude = "lat",
-           pollutant = "nox",
+           pollutant,
            statistic = "frequency",
            percentile = 90,
            lon.inc = 1,
@@ -62,127 +66,130 @@ trajLevelMap <-
            min.bin = 1,
            cols = "default",
            alpha = .5,
+           tile.border = NA,
            provider = "OpenStreetMap") {
 
-  # get titles/legend styles
+    # get titles/legend styles
 
-  style <- leaflet::labelFormat()
-  if (statistic == "frequency") {
-    title <- "percentage<br>trajectories"
-    style <- leaflet::labelFormat(between = " to ", suffix = "%")
-    data[[pollutant]] <- pollutant
-  }
-  if (statistic == "difference") {
-    lastnum <- stringr::str_sub(percentile, 2, 2)
-    suff <- "th"
-    if (lastnum == "1") suff <- "st"
-    if (lastnum == "2") suff <- "nd"
-    if (lastnum == "3") suff <- "rd"
-    title <- stringr::str_glue("gridded<br>differences<br>({percentile}{suff} percentile)")
-    style <- leaflet::labelFormat(between = " to ", suffix = "%")
-  }
+    style <- leaflet::labelFormat()
+    if (statistic == "frequency") {
+      title <- "percentage<br>trajectories"
+      style <- leaflet::labelFormat(between = " to ", suffix = "%")
+      pollutant <- "default_pollutant"
+      data[[pollutant]] <- pollutant
+    }
+    if (statistic == "difference") {
+      lastnum <- stringr::str_sub(percentile, 2, 2)
+      suff <- "th"
+      if (lastnum == "1") suff <- "st"
+      if (lastnum == "2") suff <- "nd"
+      if (lastnum == "3") suff <- "rd"
+      title <- stringr::str_glue("gridded<br>differences<br>({percentile}{suff} percentile)")
+      style <- leaflet::labelFormat(between = " to ", suffix = "%")
+    }
 
-  if (statistic == "pscf") title <- "PSCF<br>probability"
-  if (statistic == "cwt") title <- ""
-  if (statistic == "sqtba") title <- stringr::str_glue("SQTBA<br>{quickTextHTML(pollutant)}")
+    if (statistic == "pscf") title <- "PSCF<br>probability"
+    if (statistic == "cwt") title <- ""
+    if (statistic == "sqtba") title <- stringr::str_glue("SQTBA<br>{quickTextHTML(pollutant)}")
 
-  # start map
-  map <- leaflet::leaflet()
+    # start map
+    map <- leaflet::leaflet()
 
-  # set provider tiles
-  for (i in seq(length(unique(provider)))) {
-    map <- leaflet::addProviderTiles(map,
-      provider = unique(provider)[[i]],
-      group = unique(provider)[[i]]
-    )
-  }
-  if (length(unique(provider)) > 1) {
-    map <- leaflet::addLayersControl(map, baseGroups = unique(provider))
-  }
-
-  # do trajLevel (temp dir to not print plot)
-  png(filename = paste0(tempdir(), "/temp.png"))
-  tl <- openair::trajLevel(
-    mydata = data,
-    lon = longitude,
-    lat = latitude,
-    pollutant = pollutant,
-    statistic = statistic,
-    percentile = percentile,
-    lat.inc = lat.inc,
-    lon.inc = lon.inc,
-    min.bin = min.bin
-  )
-  dev.off()
-
-  # get data
-  data <- tl$data
-  names(data)[names(data) == "height"] <- pollutant
-
-  if (statistic == "frequency") {
-    pal <- leaflet::colorBin(
-      palette = openair::openColours(scheme = cols),
-      domain = data[[pollutant]],
-      bins = c(0, 1, 5, 10, 25, 100)
-    )
-  } else if (statistic == "difference") {
-    pal <- leaflet::colorBin(
-      palette = openair::openColours(scheme = cols),
-      domain = data[[pollutant]],
-      bins = c(
-        floor(min(data[[pollutant]])),
-        -10, -5, -1, 1, 5, 10,
-        ceiling(max(data[[pollutant]]))
+    # set provider tiles
+    for (i in seq(length(unique(provider)))) {
+      map <- leaflet::addProviderTiles(map,
+        provider = unique(provider)[[i]],
+        group = unique(provider)[[i]]
       )
-    )
-  } else {
-    pal <- leaflet::colorNumeric(
-      palette = openair::openColours(scheme = cols),
-      domain = data[[pollutant]]
-    )
-  }
+    }
+    if (length(unique(provider)) > 1) {
+      map <- leaflet::addLayersControl(map, baseGroups = unique(provider))
+    }
 
-  # each statistic outputs a different name for "count"
-  data$val <- data[[pollutant]]
-  if ("N" %in% names(data)) {
-    names(data)[names(data) == "N"] <- "gridcount"
-  } else if ("count" %in% names(data)) {
-    names(data)[names(data) == "count"] <- "gridcount"
-  } else if ("n" %in% names(data)) {
-    names(data)[names(data) == "n"] <- "gridcount"
-  }
+    # do trajLevel (temp dir to not print plot)
+    grDevices::png(filename = paste0(tempdir(), "/temp.png"))
+    tl <- openair::trajLevel(
+      mydata = data,
+      lon = longitude,
+      lat = latitude,
+      pollutant = pollutant,
+      statistic = statistic,
+      percentile = percentile,
+      lat.inc = lat.inc,
+      lon.inc = lon.inc,
+      min.bin = min.bin
+    )
+    grDevices::dev.off()
 
-  # create label
-  data <- dplyr::mutate(
-    data,
-    lab = stringr::str_glue(
-      "<b>Lat:</b> {ygrid} | <b>Lon:</b> {xgrid}<br>
+    # get data
+    data <- tl$data
+    names(data)[names(data) == "height"] <- pollutant
+
+    if (statistic == "frequency") {
+      pal <- leaflet::colorBin(
+        palette = openair::openColours(scheme = cols),
+        domain = data[[pollutant]],
+        bins = c(0, 1, 5, 10, 25, 100)
+      )
+    } else if (statistic == "difference") {
+      pal <- leaflet::colorBin(
+        palette = openair::openColours(scheme = cols),
+        domain = data[[pollutant]],
+        bins = c(
+          floor(min(data[[pollutant]])),
+          -10, -5, -1, 1, 5, 10,
+          ceiling(max(data[[pollutant]]))
+        )
+      )
+    } else {
+      pal <- leaflet::colorNumeric(
+        palette = openair::openColours(scheme = cols),
+        domain = data[[pollutant]]
+      )
+    }
+
+    # each statistic outputs a different name for "count"
+    data$val <- data[[pollutant]]
+    if ("N" %in% names(data)) {
+      names(data)[names(data) == "N"] <- "gridcount"
+    } else if ("count" %in% names(data)) {
+      names(data)[names(data) == "count"] <- "gridcount"
+    } else if ("n" %in% names(data)) {
+      names(data)[names(data) == "n"] <- "gridcount"
+    }
+
+    # create label
+    data <- dplyr::mutate(
+      data,
+      lab = stringr::str_glue(
+        "<b>Lat:</b> {ygrid} | <b>Lon:</b> {xgrid}<br>
        <b>Count:</b> {gridcount}<br>
        <b>Value:</b> {signif(val, 3)}"
-    ),
-    coord = stringr::str_glue("({ygrid}, {xgrid})")
-  )
-
-  if (statistic %in% c("difference", "frequency")) data$lab <- paste0(data$lab, "%")
-
-  # make map
-
-  map %>%
-    leaflet::addRectangles(
-      data = data,
-      lng1 = data[["xgrid"]] - (lon.inc/2),
-      lng2 = data[["xgrid"]] + (lon.inc/2),
-      lat1 = data[["ygrid"]] - (lat.inc/2),
-      lat2 = data[["ygrid"]] + (lat.inc/2),
-      color = "white", weight = 1,
-      fillOpacity = alpha,
-      fillColor = pal(data[[pollutant]]),
-      popup = data[["lab"]],
-      label = data[["coord"]]
-    ) %>%
-    leaflet::addLegend(
-      title = title,
-      pal = pal, values = data[[pollutant]],
-      labFormat = style
+      ),
+      coord = stringr::str_glue("({ygrid}, {xgrid})")
     )
-}
+
+    if (statistic %in% c("difference", "frequency")) data$lab <- paste0(data$lab, "%")
+
+    # make map
+
+    map %>%
+      leaflet::addRectangles(
+        data = data,
+        lng1 = data[["xgrid"]] - (lon.inc / 2),
+        lng2 = data[["xgrid"]] + (lon.inc / 2),
+        lat1 = data[["ygrid"]] - (lat.inc / 2),
+        lat2 = data[["ygrid"]] + (lat.inc / 2),
+        color = tile.border,
+        weight = 1,
+        fillOpacity = alpha,
+        fillColor = pal(data[[pollutant]]),
+        popup = data[["lab"]],
+        label = data[["coord"]]
+      ) %>%
+      leaflet::addLegend(
+        title = title,
+        pal = pal, values = data[[pollutant]],
+        labFormat = style
+      )
+  }

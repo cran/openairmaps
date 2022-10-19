@@ -8,7 +8,7 @@ trajLevelMap(
   data,
   longitude = "lon",
   latitude = "lat",
-  pollutant = "nox",
+  pollutant,
   statistic = "frequency",
   percentile = 90,
   lon.inc = 1,
@@ -16,6 +16,7 @@ trajLevelMap(
   min.bin = 1,
   cols = "default",
   alpha = 0.5,
+  tile.border = NA,
   provider = "OpenStreetMap"
 )
 }
@@ -58,12 +59,15 @@ below \code{min.bin} are set as missing.}
 
 \item{cols}{Colours to be used for plotting. Options include
 \dQuote{default}, \dQuote{increment}, \dQuote{heat}, \dQuote{jet} and
-\code{\link[RColorBrewer:ColorBrewer]{RColorBrewer::brewer.pal()}} colours — see the \code{\link[openair:openColours]{openair::openColours()}}
+\code{RColorBrewer} colours — see the \code{\link[openair:openColours]{openair::openColours()}}
 function for more details. For user defined the user can supply a list of
 colour names recognised by R (type \code{\link[grDevices:colors]{grDevices::colours()}} to see the full
 list). An example would be \code{cols = c("yellow", "green", "blue")}.}
 
 \item{alpha}{Opacity of the tiles. Must be between \code{0} and \code{1}.}
+
+\item{tile.border}{Colour to use for the border of binned tiles. Defaults to
+\code{NA}, which draws no border.}
 
 \item{provider}{The base map(s) to be used. See
 \url{http://leaflet-extras.github.io/leaflet-providers/preview/} for a list
@@ -82,4 +86,7 @@ requires that data are imported using the \code{\link[openair:importTraj]{openai
 trajLevelMap(traj_data, pollutant = "pm2.5", statistic = "pscf", min.bin = 10)
 }
 
+}
+\seealso{
+Trajectory maps: \code{\link[=trajMap]{trajMap()}}, \code{\link[=trajLevelMap]{trajLevelMap()}}.
 }

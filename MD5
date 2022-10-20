@@ -1,6 +1,6 @@
-08a3f0f6f1a13d6a33f6ca493949a9a0 *DESCRIPTION
+e065e1069abee16a396f59efb32a7c88 *DESCRIPTION
 1f73e9dc663e40ab4de1873e77a1c873 *NAMESPACE
-06c35ea93205ad7924acbbf337acbd9f *NEWS.md
+a8dfe01c7d52214c49870ef013cbd591 *NEWS.md
 8d8ccb365da5bdfc35d2542ea194ee0c *R/addPolarMarkers.R
 1c6e9095bb49dfc79ec1aa5051a609fa *R/addTrajPaths.R
 657dcb34254af31a336309fe16d57f19 *R/annulusMap.R
@@ -15,7 +15,7 @@ e6e000e305184acf36f33721921fea15 *R/polarMap.R
 20be8aacc94872b9118a0cbb889497af *R/trajLevelMap.R
 a118a47f8dc32781ec1f8d0ad82a3d1b *R/trajMap.R
 df99feb594d00b745d7e6c2b69ae84d6 *R/traj_data.R
-e8909d0be9cce43abc9610d85565724a *R/utils-map.R
+a694d33c0a4ee4466b4eb185d92796a2 *R/utils-map.R
 cf794928715019cf81bd51d467156178 *R/utils-pipe.R
 16b373f39f53e990d777bca236d91a2a *R/windroseMap.R
 df60ede45329f1d9801367bff3ff4f53 *README.md

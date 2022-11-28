@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# openairmaps
+# openairmaps <img src="man/figures/logo.png" align="right" height="134" />
 
 <!-- badges: start -->
 
@@ -12,7 +12,9 @@ status](https://www.r-pkg.org/badges/version/openairmaps)](https://CRAN.R-projec
 
 The goal of `{openairmaps}` is to combine the robust analytical methods
 found in [openair](https://davidcarslaw.github.io/openair/) with the
-highly capable `{leaflet}` package.
+highly capable `{leaflet}` package. `{openairmaps}` is thoroughly
+documented in the [openair
+book](https://bookdown.org/david_carslaw/openair/appendix-openairmaps.html).
 
 ## Installation
 
@@ -60,7 +62,7 @@ interacted with.
 library(openairmaps)
 
 polarMap(
-  polar_data, 
+  polar_data,
   pollutant = "nox"
 )
 ```
@@ -211,12 +213,16 @@ uk <- importTraj(year = 2009) %>%
 
 leaflet() %>%
   addTiles() %>%
-  addTrajPaths(data = uk,
-               color = "blue",
-               group = "London, UK") %>%
-  addTrajPaths(data = france,
-               color = "red",
-               group = "Paris, France") %>%
+  addTrajPaths(
+    data = uk,
+    color = "blue",
+    group = "London, UK"
+  ) %>%
+  addTrajPaths(
+    data = france,
+    color = "red",
+    group = "Paris, France"
+  ) %>%
   addLayersControl(overlayGroups = c("Paris, France", "London, UK"))
 ```
 

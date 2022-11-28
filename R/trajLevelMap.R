@@ -3,12 +3,11 @@
 #' This function plots back trajectories on a \code{leaflet} map. This function
 #' requires that data are imported using the [openair::importTraj()] function.
 #'
-#' @seealso Trajectory maps: [trajMap()], [trajLevelMap()].
+#' @family trajectory maps
 #'
 #' @param data Data frame, the result of importing a trajectory file using
 #'   [openair::importTraj()].
-#' @param longitude Column containing the longitude, as a decimal.
-#' @param latitude Column containing the latitude, as a decimal.
+#' @param latitude,longitude The decimal latitude/longitude.
 #' @param pollutant Pollutant to be plotted.
 #' @param statistic By default the function will plot the trajectory
 #'   frequencies. There are also various ways of plotting concentrations.
@@ -68,7 +67,6 @@ trajLevelMap <-
            alpha = .5,
            tile.border = NA,
            provider = "OpenStreetMap") {
-
     # get titles/legend styles
 
     style <- leaflet::labelFormat()
@@ -106,9 +104,8 @@ trajLevelMap <-
       map <- leaflet::addLayersControl(map, baseGroups = unique(provider))
     }
 
-    # do trajLevel (temp dir to not print plot)
-    grDevices::png(filename = paste0(tempdir(), "/temp.png"))
-    tl <- openair::trajLevel(
+    # run openair::trajLevel()
+    data <- openair::trajLevel(
       mydata = data,
       lon = longitude,
       lat = latitude,
@@ -117,12 +114,10 @@ trajLevelMap <-
       percentile = percentile,
       lat.inc = lat.inc,
       lon.inc = lon.inc,
-      min.bin = min.bin
-    )
-    grDevices::dev.off()
+      min.bin = min.bin,
+      plot = FALSE
+    )$data
 
-    # get data
-    data <- tl$data
     names(data)[names(data) == "height"] <- pollutant
 
     if (statistic == "frequency") {

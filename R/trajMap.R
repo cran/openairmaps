@@ -6,12 +6,11 @@
 #' pollutant concentrations) or create "layer control" menus to show/hide
 #' different layers.
 #'
-#' @seealso Trajectory maps: [trajMap()], [trajLevelMap()].
+#' @family trajectory maps
 #'
 #' @param data Data frame, the result of importing a trajectory file using
 #'   [openair::importTraj()].
-#' @param longitude Column containing the longitude, as a decimal.
-#' @param latitude Column containing the latitude, as a decimal.
+#' @param latitude,longitude The decimal latitude/longitude.
 #' @param colour Column to be used for colouring each trajectory. This column
 #'   may be numeric, character or factor. This will commonly be a pollutant
 #'   concentration which has been joined (e.g., by [dplyr::left_join()]) to the
@@ -21,13 +20,12 @@
 #'   menu.
 #' @param cols Colours to be used for plotting. Options include
 #'   \dQuote{default}, \dQuote{increment}, \dQuote{heat}, \dQuote{jet} and
-#'   \code{RColorBrewer} colours — see the [openair::openColours()]
-#'   function for more details. For user defined the user can supply a list of
-#'   colour names recognised by R (type [grDevices::colours()] to see the full
-#'   list). An example would be \code{cols = c("yellow", "green", "blue")}. If
-#'   the \code{"colour"} argument was not used, a single colour can be named
-#'   which will be used consistently for all lines/points (e.g., \code{cols =
-#'   "red"}).
+#'   \code{RColorBrewer} colours — see the [openair::openColours()] function for
+#'   more details. For user defined the user can supply a list of colour names
+#'   recognised by R (type [grDevices::colours()] to see the full list). An
+#'   example would be \code{cols = c("yellow", "green", "blue")}. If the
+#'   \code{"colour"} argument was not used, a single colour can be named which
+#'   will be used consistently for all lines/points (e.g., \code{cols = "red"}).
 #' @param alpha Opacity of lines/points. Must be between \code{0} and \code{1}.
 #' @param npoints A dot is placed every \code{npoints} along each full
 #'   trajectory. For hourly back trajectories points are plotted every
@@ -37,6 +35,8 @@
 #' @param provider The base map to be used. See
 #'   \url{http://leaflet-extras.github.io/leaflet-providers/preview/} for a list
 #'   of all base maps that can be used.
+#' @param collapse.control Should the "layer control" interface be collapsed?
+#'   Defaults to \code{FALSE}.
 #'
 #' @return A leaflet object.
 #' @export
@@ -55,8 +55,8 @@ trajMap <-
            cols = "default",
            alpha = .5,
            npoints = 12,
-           provider = "OpenStreetMap") {
-
+           provider = "OpenStreetMap",
+           collapse.control = FALSE) {
     # make lat/lon easier to use
     names(data)[names(data) == longitude] <- "lon"
     names(data)[names(data) == latitude] <- "lat"
@@ -122,7 +122,6 @@ trajMap <-
 
     # iterate over columns in "control" column
     for (j in seq(length(unique(data[[control]])))) {
-
       # get jth instance of "control"
       data2 <- dplyr::filter(data, .data[[control]] == unique(data[[control]])[[j]])
 
@@ -196,6 +195,7 @@ trajMap <-
       map <-
         leaflet::addLayersControl(
           map,
+          options = leaflet::layersControlOptions(collapsed = collapse.control),
           overlayGroups = as.character(unique(data[[control]]))
         )
     }

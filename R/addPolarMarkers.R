@@ -78,8 +78,8 @@ addPolarMarkers <-
            pollutant,
            iconWidth = 200,
            iconHeight = 200,
-           fig.width = 4,
-           fig.height = 4,
+           fig.width = 3.5,
+           fig.height = 3.5,
            ...) {
     # guess lat/lon
     latlon <- assume_latlon(
@@ -141,12 +141,13 @@ addPolarMarkers <-
 
     # definition of 'icons' aka the openair plots
     leafIcons <-
-      lapply(sort(paste0(
-        icon_dir, "/", unique(data[[lat]]), unique(data[[lng]]), "_", pollutant, ".png"
-      )),
-      leaflet::makeIcon,
-      iconWidth = iconWidth,
-      iconHeight = iconHeight
+      lapply(
+        sort(paste0(
+          icon_dir, "/", unique(data[[lat]]), unique(data[[lng]]), "_", pollutant, ".png"
+        )),
+        leaflet::makeIcon,
+        iconWidth = iconWidth,
+        iconHeight = iconHeight
       )
 
     names(leafIcons) <- paste0(unique(data[[lat]]), unique(data[[lng]]))

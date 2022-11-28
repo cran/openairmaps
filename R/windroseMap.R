@@ -1,48 +1,26 @@
 #' Wind rose plots on interactive leaflet maps
 #'
-#' [windroseMap()] creates a \code{leaflet} map using wind roses as
-#' markers. Multiple layers of markers can be added and toggled between
-#' using \code{control}. See [openair::windRose()] for more information.
+#' [windroseMap()] creates a \code{leaflet} map using wind roses as markers.
+#' Multiple layers of markers can be added and toggled between using
+#' \code{control}. See [openair::windRose()] for more information.
 #'
-#' @seealso Directional analysis maps: [annulusMap()], [freqMap()],
-#'   [percentileMap()], [polarMap()], [pollroseMap()], [windroseMap()].
+#' @family directional analysis maps
 #'
+#' @inheritParams polarMap
 #' @param data A data frame. The data frame must contain the data to plot a
 #'   [openair::windRose()], which includes wind speed (\code{ws}), and wind
 #'   direction (\code{wd}). In addition, \code{data} must include a decimal
 #'   latitude and longitude.
-#' @param latitude The decimal latitude. If not provided, latitude will be
-#'   automatically inferred from data by looking for a column named \dQuote{lat}
-#'   or \dQuote{latitude} (case-insensitively).
-#' @param longitude The decimal longitude. If not provided, longitude will be
-#'   automatically inferred from data by looking for a column named
-#'   \dQuote{lon}, \dQuote{lng}, \dQuote{long}, or \dQuote{longitude}
-#'   (case-insensitively).
-#' @param control Column to be used for splitting the input data into different
-#'   groups which can be selected between using a "layer control" interface.
-#'   Appropriate columns could be those added by [openair::cutData()] or
-#'   [openair::splitByDate()].
-#' @param popup Column to be used as the HTML content for marker popups. Popups
-#'   may be useful to show information about the individual sites (e.g., site
-#'   names, codes, types, etc.).
-#' @param label Column to be used as the HTML content for hover-over labels.
-#'   Labels are useful for the same reasons as popups, though are typically
-#'   shorter.
-#' @param provider The base map(s) to be used. See
-#'   \url{http://leaflet-extras.github.io/leaflet-providers/preview/} for a list
-#'   of all base maps that can be used. If multiple base maps are provided, they
-#'   can be toggled between using a "layer control" interface.
-#' @param cols The colours used for plotting.
-#' @param alpha The alpha transparency to use for the plotting surface (a value
-#'   between 0 and 1 with zero being fully transparent and 1 fully opaque).
-#' @param key Should the key of the plot be drawn. Default is \code{FALSE}.
-#' @param iconWidth The actual width of the plot on the map in pixels.
-#' @param iconHeight The actual height of the plot on the map in pixels.
-#' @param fig.width The width of the plots to be produced in inches.
-#' @param fig.height The height of the plots to be produced in inches.
-#' @param type Deprecated. Please use \code{label} and/or \code{popup} to label
-#'   different sites.
-#' @param ... Other arguments for [openair::windRose()].
+#' @param ws.int The wind speed interval. Default is 2 m/s but for low met masts
+#'   with low mean wind speeds a value of 1 or 0.5 m/s may be better.
+#' @param breaks Most commonly, the number of break points for wind speed in
+#'   windRose. For windRose and the ws.int default of 2 m/s, the default, 4,
+#'   generates the break points 2, 4, 6, 8 m/s. Breaks can also be used to set
+#'   specific break points. For example, the argument breaks = c(0, 1, 10, 100)
+#'   breaks the data into segments <1, 1-10, 10-100, >100.
+#' @param draw.legend Should a shared legend be created at the side of the map?
+#'   Default is \code{TRUE}.
+#' @inheritDotParams openair::windRose -ws.int -breaks -mydata -plot -annotate -pollutant -type -cols -key
 #' @return A leaflet object.
 #' @export
 #'
@@ -53,6 +31,8 @@
 #' )
 #' }
 windroseMap <- function(data,
+                        ws.int = 2,
+                        breaks = 4,
                         latitude = NULL,
                         longitude = NULL,
                         control = NULL,
@@ -60,12 +40,13 @@ windroseMap <- function(data,
                         label = NULL,
                         provider = "OpenStreetMap",
                         cols = "jet",
-                        alpha = 1,
                         key = FALSE,
+                        draw.legend = TRUE,
+                        collapse.control = FALSE,
                         iconWidth = 200,
                         iconHeight = 200,
-                        fig.width = 4,
-                        fig.height = 4,
+                        fig.width = 3.5,
+                        fig.height = 3.5,
                         type = NULL,
                         ...) {
   if (!is.null(type)) {
@@ -86,13 +67,13 @@ windroseMap <- function(data,
 
   # need to put ws in a separate column to work with the rest of openairmaps
   # utilities...
-  data$ws2 <- data$ws
+  data$ws_dup <- data$ws
 
   data <-
     prepMapData(
       data = data,
       type = type,
-      pollutant = "ws2",
+      pollutant = "ws_dup",
       control = control,
       "ws",
       "wd",
@@ -102,6 +83,11 @@ windroseMap <- function(data,
       label
     )
 
+  # work out breaks
+  # needs to happen before plotting to ensure same scales
+  breaks <-
+    getBreaks(breaks = breaks, ws.int = ws.int, vec = data$conc, polrose = FALSE)
+
   # define plotting function
   args <- list(...)
   if ("pollutant" %in% names(args)) {
@@ -110,7 +96,7 @@ windroseMap <- function(data,
   }
 
   fun <- function(...) {
-    rlang::exec(openair::windRose, annotate = FALSE, !!!args, ...)
+    rlang::exec(openair::windRose, annotate = FALSE, breaks = breaks, ws.int = ws.int, !!!args, ...)
   }
 
   # identify splitting column (defaulting to pollutant)
@@ -129,21 +115,39 @@ windroseMap <- function(data,
     purrr::imap(
       .f = ~ create_icons(
         data = .x, fun = fun, pollutant = "conc", split = .y,
-        lat = latitude, lon = longitude, x = x, cols = cols, alpha = alpha,
+        lat = latitude, lon = longitude, x = x, cols = cols,
         key = key, fig.width = fig.width, fig.height = fig.height,
         iconWidth = iconWidth, iconHeight = iconHeight, ...
       )
     )
 
   # plot leaflet
-  makeMap(
-    data = data,
-    icons = icons,
-    provider = provider,
-    longitude = longitude,
-    latitude = latitude,
-    popup = popup,
-    label = label,
-    split_col = split_col
-  )
+  map <-
+    makeMap(
+      data = data,
+      icons = icons,
+      provider = provider,
+      longitude = longitude,
+      latitude = latitude,
+      popup = popup,
+      label = label,
+      split_col = split_col,
+      collapse = collapse.control
+    )
+
+  if (draw.legend) {
+    map <-
+      leaflet::addLegend(
+        map,
+        pal = leaflet::colorBin(
+          palette = openair::openColours(cols),
+          domain = breaks,
+          bins = breaks
+        ),
+        values = breaks,
+        title = "Wind Speed"
+      )
+  }
+
+  map
 }

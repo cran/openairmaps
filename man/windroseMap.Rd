@@ -6,6 +6,8 @@
 \usage{
 windroseMap(
   data,
+  ws.int = 2,
+  breaks = 4,
   latitude = NULL,
   longitude = NULL,
   control = NULL,
@@ -13,12 +15,13 @@ windroseMap(
   label = NULL,
   provider = "OpenStreetMap",
   cols = "jet",
-  alpha = 1,
   key = FALSE,
+  draw.legend = TRUE,
+  collapse.control = FALSE,
   iconWidth = 200,
   iconHeight = 200,
-  fig.width = 4,
-  fig.height = 4,
+  fig.width = 3.5,
+  fig.height = 3.5,
   type = NULL,
   ...
 )
@@ -29,19 +32,26 @@ windroseMap(
 direction (\code{wd}). In addition, \code{data} must include a decimal
 latitude and longitude.}
 
-\item{latitude}{The decimal latitude. If not provided, latitude will be
-automatically inferred from data by looking for a column named \dQuote{lat}
-or \dQuote{latitude} (case-insensitively).}
+\item{ws.int}{The wind speed interval. Default is 2 m/s but for low met masts
+with low mean wind speeds a value of 1 or 0.5 m/s may be better.}
 
-\item{longitude}{The decimal longitude. If not provided, longitude will be
-automatically inferred from data by looking for a column named
-\dQuote{lon}, \dQuote{lng}, \dQuote{long}, or \dQuote{longitude}
+\item{breaks}{Most commonly, the number of break points for wind speed in
+windRose. For windRose and the ws.int default of 2 m/s, the default, 4,
+generates the break points 2, 4, 6, 8 m/s. Breaks can also be used to set
+specific break points. For example, the argument breaks = c(0, 1, 10, 100)
+breaks the data into segments <1, 1-10, 10-100, >100.}
+
+\item{latitude, longitude}{The decimal latitude/longitude. If not provided,
+will be automatically inferred from data by looking for a column named
+\dQuote{lat}/\dQuote{latitude} or
+\dQuote{lon}/\dQuote{lng}/\dQuote{long}/\dQuote{longitude}
 (case-insensitively).}
 
 \item{control}{Column to be used for splitting the input data into different
 groups which can be selected between using a "layer control" interface.
 Appropriate columns could be those added by \code{\link[openair:cutData]{openair::cutData()}} or
-\code{\link[openair:splitByDate]{openair::splitByDate()}}.}
+\code{\link[openair:splitByDate]{openair::splitByDate()}}. \code{control} cannot be used if multiple
+\code{pollutant} columns have been provided.}
 
 \item{popup}{Column to be used as the HTML content for marker popups. Popups
 may be useful to show information about the individual sites (e.g., site
@@ -58,10 +68,13 @@ can be toggled between using a "layer control" interface.}
 
 \item{cols}{The colours used for plotting.}
 
-\item{alpha}{The alpha transparency to use for the plotting surface (a value
-between 0 and 1 with zero being fully transparent and 1 fully opaque).}
+\item{key}{Should a key for each marker be drawn? Default is \code{FALSE}.}
 
-\item{key}{Should the key of the plot be drawn. Default is \code{FALSE}.}
+\item{draw.legend}{Should a shared legend be created at the side of the map?
+Default is \code{TRUE}.}
+
+\item{collapse.control}{Should the "layer control" interface be collapsed?
+Defaults to \code{FALSE}.}
 
 \item{iconWidth}{The actual width of the plot on the map in pixels.}
 
@@ -74,15 +87,100 @@ between 0 and 1 with zero being fully transparent and 1 fully opaque).}
 \item{type}{Deprecated. Please use \code{label} and/or \code{popup} to label
 different sites.}
 
-\item{...}{Other arguments for \code{\link[openair:windRose]{openair::windRose()}}.}
+\item{...}{
+  Arguments passed on to \code{\link[openair:windRose]{openair::windRose}}
+  \describe{
+    \item{\code{ws}}{Name of the column representing wind speed.}
+    \item{\code{wd}}{Name of the column representing wind direction.}
+    \item{\code{ws2}}{The user can supply a second set of wind speed and wind
+direction values with which the first can be compared. See
+details below for full explanation.}
+    \item{\code{wd2}}{see \code{ws2}.}
+    \item{\code{angle}}{Default angle of \dQuote{spokes} is 30. Other
+potentially useful angles are 45 and 10. Note that the width of
+the wind speed interval may need adjusting using \code{width}.}
+    \item{\code{bias.corr}}{When \code{angle} does not divide exactly into
+360 a bias is introduced in the frequencies when the wind
+direction is already supplied rounded to the nearest 10 degrees,
+as is often the case. For example, if \code{angle = 22.5}, N, E,
+S, W will include 3 wind sectors and all other angles will be
+two. A bias correction can made to correct for this problem. A
+simple method according to Applequist (2012) is used to adjust
+the frequencies.}
+    \item{\code{grid.line}}{Grid line interval to use. If \code{NULL}, as in
+default, this is assigned by \code{windRose} based on the
+available data range. However, it can also be forced to a
+specific value, e.g. \code{grid.line = 10}. \code{grid.line} can
+also be a list to control the interval, line type and colour.
+For example \code{grid.line = list(value = 10, lty = 5, col =
+"purple")}.}
+    \item{\code{width}}{For \code{paddle = TRUE}, the adjustment factor for
+width of wind speed intervals. For example, \code{width = 1.5}
+will make the paddle width 1.5 times wider.}
+    \item{\code{seg}}{For \code{pollutionRose} \code{seg} determines with
+width of the segments. For example, \code{seg = 0.5} will
+produce segments 0.5 * \code{angle}.}
+    \item{\code{auto.text}}{Either \code{TRUE} (default) or \code{FALSE}. If
+\code{TRUE} titles and axis labels will automatically try and
+format pollutant names and units properly e.g.  by subscripting
+the \sQuote{2} in NO2.}
+    \item{\code{offset}}{The size of the 'hole' in the middle of the plot,
+expressed as a percentage of the polar axis scale, default 10.}
+    \item{\code{normalise}}{If \code{TRUE} each wind direction segment of a
+pollution rose is normalised to equal one. This is useful for
+showing how the concentrations (or other parameters) contribute
+to each wind sector when the proprtion of time the wind is from
+that direction is low. A line showing the probability that the
+wind directions is from a particular wind sector is also shown.}
+    \item{\code{max.freq}}{Controls the scaling used by setting the maximum
+value for the radial limits. This is useful to ensure several
+plots use the same radial limits.}
+    \item{\code{paddle}}{Either \code{TRUE} (default) or \code{FALSE}. If
+\code{TRUE} plots rose using `paddle' style spokes. If
+\code{FALSE} plots rose using `wedge' style spokes.}
+    \item{\code{key.header}}{Adds additional text/labels above and/or below
+the scale key, respectively. For example, passing
+\code{windRose(mydata, key.header = "ws")} adds the addition
+text as a scale header. Note: This argument is passed to
+\code{drawOpenKey} via \code{quickText}, applying the auto.text
+argument, to handle formatting.}
+    \item{\code{key.footer}}{see \code{key.footer}.}
+    \item{\code{key.position}}{Location where the scale key is to plotted.
+Allowed arguments currently include \dQuote{top},
+\dQuote{right}, \dQuote{bottom} and \dQuote{left}.}
+    \item{\code{dig.lab}}{The number of signficant figures at which
+scientific number formatting is used in break point and key
+labelling. Default 5.}
+    \item{\code{include.lowest}}{Logical. If \code{FALSE} (the default), the first wind
+speed interval will be left exclusive and right inclusive. If \code{TRUE},
+the first interval will be left and right inclusive. Passed to the
+\code{include.lowest} argument of \code{cut()}.}
+    \item{\code{statistic}}{The \code{statistic} to be applied to each data
+bin in the plot. Options currently include \dQuote{prop.count},
+\dQuote{prop.mean} and \dQuote{abs.count}. The default
+\dQuote{prop.count} sizes bins according to the proportion of
+the frequency of measurements.  Similarly, \dQuote{prop.mean}
+sizes bins according to their relative contribution to the mean.
+\dQuote{abs.count} provides the absolute count of measurements
+in each bin.}
+    \item{\code{angle.scale}}{The wind speed scale is by default shown at a
+315 degree angle. Sometimes the placement of the scale may
+interfere with an interesting feature. The user can therefore
+set \code{angle.scale} to another value (between 0 and 360
+degrees) to mitigate such problems. For example
+\code{angle.scale = 45} will draw the scale heading in a NE
+direction.}
+    \item{\code{border}}{Border colour for shaded areas. Default is no
+border.}
+  }}
 }
 \value{
 A leaflet object.
 }
 \description{
-\code{\link[=windroseMap]{windroseMap()}} creates a \code{leaflet} map using wind roses as
-markers. Multiple layers of markers can be added and toggled between
-using \code{control}. See \code{\link[openair:windRose]{openair::windRose()}} for more information.
+\code{\link[=windroseMap]{windroseMap()}} creates a \code{leaflet} map using wind roses as markers.
+Multiple layers of markers can be added and toggled between using
+\code{control}. See \code{\link[openair:windRose]{openair::windRose()}} for more information.
 }
 \examples{
 \dontrun{
@@ -92,6 +190,11 @@ windroseMap(polar_data,
 }
 }
 \seealso{
-Directional analysis maps: \code{\link[=annulusMap]{annulusMap()}}, \code{\link[=freqMap]{freqMap()}},
-\code{\link[=percentileMap]{percentileMap()}}, \code{\link[=polarMap]{polarMap()}}, \code{\link[=pollroseMap]{pollroseMap()}}, \code{\link[=windroseMap]{windroseMap()}}.
+Other directional analysis maps: 
+\code{\link{annulusMap}()},
+\code{\link{freqMap}()},
+\code{\link{percentileMap}()},
+\code{\link{polarMap}()},
+\code{\link{pollroseMap}()}
 }
+\concept{directional analysis maps}

@@ -8,6 +8,7 @@ pollroseMap(
   data,
   pollutant = NULL,
   statistic = "prop.count",
+  breaks = NULL,
   latitude = NULL,
   longitude = NULL,
   control = NULL,
@@ -15,19 +16,20 @@ pollroseMap(
   label = NULL,
   provider = "OpenStreetMap",
   cols = "jet",
-  alpha = 1,
   key = FALSE,
+  draw.legend = TRUE,
+  collapse.control = FALSE,
   iconWidth = 200,
   iconHeight = 200,
-  fig.width = 4,
-  fig.height = 4,
+  fig.width = 3.5,
+  fig.height = 3.5,
   type = NULL,
   ...
 )
 }
 \arguments{
-\item{data}{A data frame. The data frame must contain the data to plot a
-\code{\link[openair:windRose]{openair::pollutionRose()}}, which includes wind speed (\code{ws}), wind
+\item{data}{A data frame. The data frame must contain the data to plot the
+directional analysis marker, which includes wind speed (\code{ws}), wind
 direction (\code{wd}), and the column representing the concentration of a
 pollutant. In addition, \code{data} must include a decimal latitude and
 longitude.}
@@ -44,13 +46,17 @@ the proportion of the frequency of measurements.  Similarly,
 the mean. \dQuote{abs.count} provides the absolute count of measurements in
 each bin.}
 
-\item{latitude}{The decimal latitude. If not provided, latitude will be
-automatically inferred from data by looking for a column named \dQuote{lat}
-or \dQuote{latitude} (case-insensitively).}
+\item{breaks}{Most commonly, the number of break points. If not specified,
+each marker will independently break its supplied data at approximately 6
+sensible break points. When \code{breaks} are specified, all markers will
+use the same break points. Breaks can also be used to set specific break
+points. For example, the argument \code{breaks = c(0, 1, 10, 100)} breaks
+the data into segments <1, 1-10, 10-100, >100.}
 
-\item{longitude}{The decimal longitude. If not provided, longitude will be
-automatically inferred from data by looking for a column named
-\dQuote{lon}, \dQuote{lng}, \dQuote{long}, or \dQuote{longitude}
+\item{latitude, longitude}{The decimal latitude/longitude. If not provided,
+will be automatically inferred from data by looking for a column named
+\dQuote{lat}/\dQuote{latitude} or
+\dQuote{lon}/\dQuote{lng}/\dQuote{long}/\dQuote{longitude}
 (case-insensitively).}
 
 \item{control}{Column to be used for splitting the input data into different
@@ -74,10 +80,13 @@ can be toggled between using a "layer control" interface.}
 
 \item{cols}{The colours used for plotting.}
 
-\item{alpha}{The alpha transparency to use for the plotting surface (a value
-between 0 and 1 with zero being fully transparent and 1 fully opaque).}
+\item{key}{Should a key for each marker be drawn? Default is \code{FALSE}.}
 
-\item{key}{Should the key of the plot be drawn. Default is \code{FALSE}.}
+\item{draw.legend}{When \code{breaks} are specified, should a shared legend
+be created at the side of the map? Default is \code{TRUE}.}
+
+\item{collapse.control}{Should the "layer control" interface be collapsed?
+Defaults to \code{FALSE}.}
 
 \item{iconWidth}{The actual width of the plot on the map in pixels.}
 
@@ -90,7 +99,26 @@ between 0 and 1 with zero being fully transparent and 1 fully opaque).}
 \item{type}{Deprecated. Please use \code{label} and/or \code{popup} to label
 different sites.}
 
-\item{...}{Other arguments for \code{\link[openair:windRose]{openair::pollutionRose()}}.}
+\item{...}{
+  Arguments passed on to \code{\link[openair:windRose]{openair::pollutionRose}}
+  \describe{
+    \item{\code{seg}}{For \code{pollutionRose} \code{seg} determines with
+width of the segments. For example, \code{seg = 0.5} will
+produce segments 0.5 * \code{angle}.}
+    \item{\code{normalise}}{If \code{TRUE} each wind direction segment of a
+pollution rose is normalised to equal one. This is useful for
+showing how the concentrations (or other parameters) contribute
+to each wind sector when the proprtion of time the wind is from
+that direction is low. A line showing the probability that the
+wind directions is from a particular wind sector is also shown.}
+    \item{\code{paddle}}{Either \code{TRUE} (default) or \code{FALSE}. If
+\code{TRUE} plots rose using `paddle' style spokes. If
+\code{FALSE} plots rose using `wedge' style spokes.}
+    \item{\code{key.footer}}{see \code{key.footer}.}
+    \item{\code{key.position}}{Location where the scale key is to plotted.
+Allowed arguments currently include \dQuote{top},
+\dQuote{right}, \dQuote{bottom} and \dQuote{left}.}
+  }}
 }
 \value{
 A leaflet object.
@@ -111,6 +139,11 @@ pollroseMap(polar_data,
 }
 }
 \seealso{
-Directional analysis maps: \code{\link[=annulusMap]{annulusMap()}}, \code{\link[=freqMap]{freqMap()}},
-\code{\link[=percentileMap]{percentileMap()}}, \code{\link[=polarMap]{polarMap()}}, \code{\link[=pollroseMap]{pollroseMap()}}, \code{\link[=windroseMap]{windroseMap()}}.
+Other directional analysis maps: 
+\code{\link{annulusMap}()},
+\code{\link{freqMap}()},
+\code{\link{percentileMap}()},
+\code{\link{polarMap}()},
+\code{\link{windroseMap}()}
 }
+\concept{directional analysis maps}

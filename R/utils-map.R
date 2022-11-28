@@ -133,11 +133,12 @@ checkMapPrep <-
       ids <- which(is.na(mydata$date))
       if (length(ids) > 0) {
         mydata <- mydata[-ids, ]
-        warning(paste(
-          "Missing dates detected, removing",
-          length(ids), "lines"
-        ),
-        call. = FALSE
+        warning(
+          paste(
+            "Missing dates detected, removing",
+            length(ids), "lines"
+          ),
+          call. = FALSE
         )
       }
 
@@ -216,7 +217,6 @@ save_icon_image <-
            lat,
            lon,
            cols,
-           alpha,
            key,
            fig.width,
            fig.height,
@@ -237,7 +237,6 @@ save_icon_image <-
       key = key,
       cols = cols,
       par.settings = list(axis.line = list(col = "transparent")),
-      alpha = alpha,
       ...
     )
 
@@ -254,7 +253,6 @@ create_icons <-
            lat,
            lon,
            cols,
-           alpha,
            key,
            fig.width,
            fig.height,
@@ -279,7 +277,6 @@ create_icons <-
           lat = lat,
           lon = lon,
           cols = cols,
-          alpha = alpha,
           key = key,
           fig.width = fig.width,
           fig.height = fig.height,
@@ -291,12 +288,13 @@ create_icons <-
 
     # definition of 'icons' aka the openair plots
     leafIcons <-
-      lapply(sort(paste0(
-        icon_dir, "/", unique(dat2$id), "_", split, ".png"
-      )),
-      leaflet::makeIcon,
-      iconWidth = iconWidth,
-      iconHeight = iconHeight
+      lapply(
+        sort(paste0(
+          icon_dir, "/", unique(dat2$id), "_", split, ".png"
+        )),
+        leaflet::makeIcon,
+        iconWidth = iconWidth,
+        iconHeight = iconHeight
       )
     names(leafIcons) <- unique(dat2$id)
     class(leafIcons) <- "leaflet_icon_set"
@@ -315,7 +313,8 @@ makeMap <-
            latitude,
            split_col,
            popup,
-           label) {
+           label,
+           collapse) {
     provider <- unique(provider)
 
     # data for plotting
@@ -375,15 +374,18 @@ makeMap <-
       m <-
         leaflet::addLayersControl(
           m,
+          options = leaflet::layersControlOptions(collapsed = collapse),
           baseGroups = names(icons) %>% purrr::map_chr(quickTextHTML),
           overlayGroups = provider
         )
     } else if (length(icons) > 1 & length(provider) == 1) {
       m <- leaflet::addLayersControl(m,
+                                     options = leaflet::layersControlOptions(collapsed = collapse),
                                      baseGroups = names(icons) %>% purrr::map_chr(quickTextHTML)
       )
     } else if (length(provider) > 1 & length(icons) == 1) {
       m <- leaflet::addLayersControl(m,
+                                     options = leaflet::layersControlOptions(collapsed = collapse),
                                      baseGroups = provider
       )
     }
@@ -446,4 +448,31 @@ assume_latlon <- function(data, latitude, longitude) {
     latitude = latitude,
     longitude = longitude
   )
+}
+
+#' get breaks for the "rose" functions
+#' @param breaks as given by windrose
+#' @param ws.int as given by windrose
+#' @param vec the vector to calc max/min/q90
+#' @param polrose use pollutionrose method? T/F
+#' @noRd
+getBreaks <- function(breaks, ws.int, vec, polrose) {
+  if (is.numeric(breaks) & length(breaks) == 1 & polrose) {
+    breaks <- unique(pretty(
+      c(
+        min(vec, na.rm = TRUE),
+        stats::quantile(vec, probs = 0.9, na.rm = TRUE)
+      ),
+      breaks
+    ))
+  }
+  if (length(breaks) == 1) {
+    breaks <- 0:(breaks - 1) * ws.int
+  }
+  if (max(breaks) < max(vec, na.rm = T)) {
+    breaks <- c(breaks, max(vec, na.rm = T))
+  }
+  breaks <- unique(breaks)
+  breaks <- sort(breaks)
+  breaks
 }

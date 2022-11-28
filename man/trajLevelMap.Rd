@@ -24,9 +24,7 @@ trajLevelMap(
 \item{data}{Data frame, the result of importing a trajectory file using
 \code{\link[openair:importTraj]{openair::importTraj()}}.}
 
-\item{longitude}{Column containing the longitude, as a decimal.}
-
-\item{latitude}{Column containing the latitude, as a decimal.}
+\item{latitude, longitude}{The decimal latitude/longitude.}
 
 \item{pollutant}{Pollutant to be plotted.}
 
@@ -88,5 +86,7 @@ trajLevelMap(traj_data, pollutant = "pm2.5", statistic = "pscf", min.bin = 10)
 
 }
 \seealso{
-Trajectory maps: \code{\link[=trajMap]{trajMap()}}, \code{\link[=trajLevelMap]{trajLevelMap()}}.
+Other trajectory maps: 
+\code{\link{trajMap}()}
 }
+\concept{trajectory maps}

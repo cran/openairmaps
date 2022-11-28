@@ -7,6 +7,7 @@
 percentileMap(
   data,
   pollutant = NULL,
+  percentile = c(25, 50, 75, 90, 95),
   latitude = NULL,
   longitude = NULL,
   control = NULL,
@@ -14,19 +15,20 @@ percentileMap(
   label = NULL,
   provider = "OpenStreetMap",
   cols = "jet",
-  alpha = 1,
   key = FALSE,
+  draw.legend = TRUE,
+  collapse.control = FALSE,
   iconWidth = 200,
   iconHeight = 200,
-  fig.width = 4,
-  fig.height = 4,
+  fig.width = 3.5,
+  fig.height = 3.5,
   type = NULL,
   ...
 )
 }
 \arguments{
-\item{data}{A data frame. The data frame must contain the data to plot a
-\code{\link[openair:percentileRose]{openair::percentileRose()}}, which includes wind speed (\code{ws}), wind
+\item{data}{A data frame. The data frame must contain the data to plot the
+directional analysis marker, which includes wind speed (\code{ws}), wind
 direction (\code{wd}), and the column representing the concentration of a
 pollutant. In addition, \code{data} must include a decimal latitude and
 longitude.}
@@ -35,13 +37,13 @@ longitude.}
 pollutants are specified, they can be toggled between using a "layer
 control" interface.}
 
-\item{latitude}{The decimal latitude. If not provided, latitude will be
-automatically inferred from data by looking for a column named \dQuote{lat}
-or \dQuote{latitude} (case-insensitively).}
+\item{percentile}{The percentile value(s) to plot. Must be between 0–100. If
+\code{percentile = NA} then only a mean line will be shown.}
 
-\item{longitude}{The decimal longitude. If not provided, longitude will be
-automatically inferred from data by looking for a column named
-\dQuote{lon}, \dQuote{lng}, \dQuote{long}, or \dQuote{longitude}
+\item{latitude, longitude}{The decimal latitude/longitude. If not provided,
+will be automatically inferred from data by looking for a column named
+\dQuote{lat}/\dQuote{latitude} or
+\dQuote{lon}/\dQuote{lng}/\dQuote{long}/\dQuote{longitude}
 (case-insensitively).}
 
 \item{control}{Column to be used for splitting the input data into different
@@ -65,10 +67,13 @@ can be toggled between using a "layer control" interface.}
 
 \item{cols}{The colours used for plotting.}
 
-\item{alpha}{The alpha transparency to use for the plotting surface (a value
-between 0 and 1 with zero being fully transparent and 1 fully opaque).}
+\item{key}{Should a key for each marker be drawn? Default is \code{FALSE}.}
 
-\item{key}{Should the key of the plot be drawn. Default is \code{FALSE}.}
+\item{draw.legend}{Should a shared legend be created at the side of the map?
+Default is \code{TRUE}.}
+
+\item{collapse.control}{Should the "layer control" interface be collapsed?
+Defaults to \code{FALSE}.}
 
 \item{iconWidth}{The actual width of the plot on the map in pixels.}
 
@@ -81,7 +86,51 @@ between 0 and 1 with zero being fully transparent and 1 fully opaque).}
 \item{type}{Deprecated. Please use \code{label} and/or \code{popup} to label
 different sites.}
 
-\item{...}{Other arguments for \code{\link[openair:percentileRose]{openair::percentileRose()}}.}
+\item{...}{
+  Arguments passed on to \code{\link[openair:percentileRose]{openair::percentileRose}}
+  \describe{
+    \item{\code{wd}}{Name of the wind direction field.}
+    \item{\code{smooth}}{Should the wind direction data be smoothed using a
+cyclic spline?}
+    \item{\code{method}}{When \code{method = "default"} the supplied
+percentiles by wind direction are calculated. When \code{method
+= "cpf"} the conditional probability function (CPF) is plotted
+and a single (usually high) percentile level is supplied. The
+CPF is defined as CPF = my/ny, where my is the number of samples
+in the wind sector y with mixing ratios greater than the
+\emph{overall} percentile concentration, and ny is the total
+number of samples in the same wind sector (see Ashbaugh et al.,
+1985).}
+    \item{\code{angle}}{Default angle of \dQuote{spokes} is when \code{smooth = FALSE}.}
+    \item{\code{mean}}{Show the mean by wind direction as a line?}
+    \item{\code{mean.lty}}{Line type for mean line.}
+    \item{\code{mean.lwd}}{Line width for mean line.}
+    \item{\code{mean.col}}{Line colour for mean line.}
+    \item{\code{fill}}{Should the percentile intervals be filled (default) or
+should lines be drawn (\code{fill = FALSE}).}
+    \item{\code{intervals}}{User-supplied intervals for the scale e.g.
+\code{intervals = c(0, 10, 30, 50)}}
+    \item{\code{angle.scale}}{The pollutant scale is by default shown at a 45
+degree angle. Sometimes the placement of the scale may interfere
+with an interesting feature. The user can therefore set
+\code{angle.scale} to another value (between 0 and 360 degrees)
+to mitigate such problems. For example \code{angle.scale = 315}
+will draw the scale heading in a NW direction.}
+    \item{\code{auto.text}}{Either \code{TRUE} (default) or \code{FALSE}. If
+\code{TRUE} titles and axis labels will automatically try and
+format pollutant names and units properly e.g.  by subscripting
+the \sQuote{2} in NO2.}
+    \item{\code{key.header}}{Adds additional text/labels to the scale key.
+For example, passing options \code{key.header = "header",
+key.footer = "footer"} adds addition text above and below the
+scale key. These arguments are passed to \code{drawOpenKey} via
+\code{quickText}, applying the \code{auto.text} argument, to
+handle formatting.}
+    \item{\code{key.footer}}{\code{key.header}.}
+    \item{\code{key.position}}{Location where the scale key is to plotted.
+Allowed arguments currently include \code{"top"},
+\code{"right"}, \code{"bottom"} and \code{"left"}.}
+  }}
 }
 \value{
 A leaflet object.
@@ -101,6 +150,11 @@ percentileMap(polar_data,
 }
 }
 \seealso{
-Directional analysis maps: \code{\link[=annulusMap]{annulusMap()}}, \code{\link[=freqMap]{freqMap()}},
-\code{\link[=percentileMap]{percentileMap()}}, \code{\link[=polarMap]{polarMap()}}, \code{\link[=pollroseMap]{pollroseMap()}}, \code{\link[=windroseMap]{windroseMap()}}.
+Other directional analysis maps: 
+\code{\link{annulusMap}()},
+\code{\link{freqMap}()},
+\code{\link{polarMap}()},
+\code{\link{pollroseMap}()},
+\code{\link{windroseMap}()}
 }
+\concept{directional analysis maps}

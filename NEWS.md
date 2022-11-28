@@ -1,6 +1,42 @@
+# openairmaps 0.6.0
+
+## Directional Analysis
+
+* All directional analysis maps can now have their limits provided (can be "limits", "breaks", "percentiles", etc., depending on function). This was always possible through `...`, but it is now explicitly listed as an option.
+
+* If limits are defined in a directional analysis function, a shared legend will now be drawn at the top-right of the map. This functionality can be disabled by setting `draw.legend` to FALSE.
+
+* Added the `buildPopup()` function, which allows users to easily construct HTML popups for use with the "popup" argument of directional analysis maps (or `leaflet` maps more widely).
+
+* All directional analysis maps now possess the `collapse.control` argument, which controls whether the control menu starts collapsed or not. It defaults to `FALSE`, which means the control menu is not collapsed.
+
+* The default options for fig.width and fig.height are now `3.5` rather than `4`. This appears to remove some visual artefacts and makes the axis labels more legible.
+
+* The "alpha" option has been removed for all directional analysis functions except `polarMap()` as it only ever worked for `polarMap()`.
+
+* All documentation has been improved; function parameters are more consistent between functions and arguments passed to `openair` via `...` are now explicitly listed.
+
+## Network Visualisation
+
+* `networkMap()` now supports multiple sources. For example, using `source = c("aurn", "saqn")` will show both the AURN and SAQN on one map. This may be useful if users are interested in air quality in a specific region of the UK (e.g., users may wish to locate AURN, AQE *and* locally managed sites near to a given urban centre).
+
+* `networkMap()` now supports `source = "local"`.
+
+* Multiple basemap providers can now be used with `networkMap()`.
+
+* `networkMap()` has gained the `collapse.control` argument.
+
+## Trajectory Analysis
+
+* `trajMap()` has gained the `collapse.control` argument.
+
+
+
 # openairmaps 0.5.1
 
 * FIX: fixed an issue causing markers to be duplicated when pollutant information is missing for certain sites.
+
+
 
 # openairmaps 0.5.0 (2022-10-19)
 

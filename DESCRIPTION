@@ -1,7 +1,7 @@
 Package: openairmaps
 Type: Package
 Title: Create Interactive Web Maps of Air Pollution Data
-Version: 0.6.0
+Version: 0.6.1
 Authors@R: 
   c(person(given = "Jack",
            family = "Davison",
@@ -19,15 +19,15 @@ License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.2.0)
-Imports: openair, dplyr, leaflet, purrr, magrittr, rlang, lubridate,
-        tibble, stringr, forcats, tidyr, cli, tidyselect
+Imports: openair (>= 2.13), dplyr, leaflet, purrr, magrittr, rlang,
+        lubridate, tibble, stringr, forcats, tidyr, cli, tidyselect
 Suggests: worldmet
-RoxygenNote: 7.2.2
+RoxygenNote: 7.2.3
 Language: en-GB
 NeedsCompilation: no
-Packaged: 2022-11-28 15:38:46 UTC; JD38
+Packaged: 2023-01-09 09:36:12 UTC; JD38
 Author: Jack Davison [cre, aut],
   David Carslaw [aut]
 Maintainer: Jack Davison <davison.jack.jd@gmail.com>
 Repository: CRAN
-Date/Publication: 2022-11-28 16:10:02 UTC
+Date/Publication: 2023-01-09 10:30:06 UTC

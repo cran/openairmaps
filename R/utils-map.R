@@ -84,7 +84,7 @@ checkMapPrep <-
       if (wd %in% Names & is.numeric(mydata[, wd])) {
         ## check for wd <0 or > 360
         if (any(sign(mydata[[wd]][!is.na(mydata[[wd]])]) == -1 |
-                mydata[[wd]][!is.na(mydata[[wd]])] > 360)) {
+          mydata[[wd]][!is.na(mydata[[wd]])] > 360)) {
           warning("Wind direction < 0 or > 360; removing these data")
           mydata[[wd]][mydata[[wd]] < 0] <- NA
           mydata[[wd]][mydata[[wd]] > 360] <- NA
@@ -267,6 +267,7 @@ create_icons <-
 
     # go through all sites and make some plot
     data %>%
+      dplyr::arrange(.data[[lat]], .data[[lon]]) %>%
       dplyr::group_split(.data[[lat]], .data[[lon]]) %>%
       purrr::walk(
         .f = ~ save_icon_image(
@@ -284,14 +285,16 @@ create_icons <-
         )
       )
 
-    dat2 <- dplyr::mutate(data, id = paste0(.data[[lat]], .data[[lon]]))
+    dat2 <- data %>%
+      dplyr::arrange(.data[[lat]], .data[[lon]]) %>%
+      dplyr::mutate(id = paste0(.data[[lat]], .data[[lon]]))
 
     # definition of 'icons' aka the openair plots
     leafIcons <-
       lapply(
-        sort(paste0(
+        paste0(
           icon_dir, "/", unique(dat2$id), "_", split, ".png"
-        )),
+        ),
         leaflet::makeIcon,
         iconWidth = iconWidth,
         iconHeight = iconHeight
@@ -380,13 +383,13 @@ makeMap <-
         )
     } else if (length(icons) > 1 & length(provider) == 1) {
       m <- leaflet::addLayersControl(m,
-                                     options = leaflet::layersControlOptions(collapsed = collapse),
-                                     baseGroups = names(icons) %>% purrr::map_chr(quickTextHTML)
+        options = leaflet::layersControlOptions(collapsed = collapse),
+        baseGroups = names(icons) %>% purrr::map_chr(quickTextHTML)
       )
     } else if (length(provider) > 1 & length(icons) == 1) {
       m <- leaflet::addLayersControl(m,
-                                     options = leaflet::layersControlOptions(collapsed = collapse),
-                                     baseGroups = provider
+        options = leaflet::layersControlOptions(collapsed = collapse),
+        baseGroups = provider
       )
     }
 
@@ -418,7 +421,7 @@ assume_latlon <- function(data, latitude, longitude) {
     len <- length(out)
     if (len > 1) {
       cli::cli_abort("Cannot identify {name}: Multiple possible matches ({out})",
-                     call = NULL
+        call = NULL
       )
       return(NULL)
     } else if (len == 0) {

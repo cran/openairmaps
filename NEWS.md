@@ -1,3 +1,31 @@
+# openairmaps 0.7.0
+
+* Added "static" equivalents of all of the polar marker maps written in `{ggplot2}`. While interactive HTML maps are preferred, the static equivalents may be more appropriate for, e.g., academic publications.
+
+  * The `{ggplot2}` functions can be identified by "Static" being appended to the function name. For example, `polarMap()` is the `{leaflet}` polar plot map, whereas `polarMapStatic()` is the `{ggplot2}` equivalent.
+  
+  * Currently, "static" versions of the trajectory maps are served by `openair::trajPlot()` and `openair::trajLevel()`, but there may be space in future to have `ggmap` equivalents of these in `openairmaps`.
+
+* Added `diffMap()` and `diffMapStatic()` which are to `openair::polarDiff()` what `polarMap()` and `polarMapStatic()` are to `openair::polarPlot()`. Also added `addPolarDiffMarkers()`, which is the equivalent of `addPolarMarkers()`.
+
+* Added `alpha` as an argument to all of the directional analysis polar mapping functions, not just `polarMap()`.
+
+* Fixed `alpha` to work on both Windows and MacOS by forcing the use of the "cairo" device to save plots.
+
+* Polar marker maps and `addPolarMarkers()` now show a progress bar when creating the markers takes more than a few seconds (most commonly in `polarMap()` and `annulusMap()`, particularly with multiple pollutants/control groups).
+
+* `networkMap()` can now pass the new `year` option to `importMeta()`.
+
+* BREAKING: The `fig.width`, `fig.height`, `iconHeight` and `iconWidth` arguments have been replaced with `d.fig` and `d.icon`. There are two main justifications behind this:
+
+  * This ensures consistency across all of `{openairmaps}`, making it easier to switch between the static and HTML map types.
+  
+  * Polar markers are almost always going to be circular (i.e., width = height) so  having one argument will streamline things. If users wish to have non-circular markers, a vector of length two in the form `c(width, height)` will provide the same functionality.
+
+* BREAKING: The arguments in `addPolarMarkers()` have been put in a more sensible order, leading with `data`, `pollutant` and `fun`.
+
+* BREAKING: The `date` argument from `networkMap()` has been replaced by `year`.
+
 # openairmaps 0.6.1
 
 * Fixed issue with polar marker maps (e.g., `polarMap()`) and the generic `addPolarMarkers()` function where lat/lon info in the Southern Hemisphere would misalign markers. Hat tip to Deanna Tuxford and James/"@jenright-git" for noticing this issue.
@@ -6,7 +34,7 @@
 
 * Functions now use Google's "turbo" colour palette rather than "jet" by default. More about this palette and the advantages of using it over "jet" can be read at <https://ai.googleblog.com/2019/08/turbo-improved-rainbow-colormap-for.html>.
 
-# openairmaps 0.6.0 (29/11/2022)
+# openairmaps 0.6.0
 
 ## Directional Analysis
 
@@ -38,15 +66,11 @@
 
 * `trajMap()` has gained the `collapse.control` argument.
 
-
-
 # openairmaps 0.5.1
 
 * FIX: fixed an issue causing markers to be duplicated when pollutant information is missing for certain sites.
 
-
-
-# openairmaps 0.5.0 (2022-10-19)
+# openairmaps 0.5.0
 
 ## Directional Analysis
 
@@ -70,9 +94,7 @@
 
 * Updated many error messages and warnings to use `{cli}` and be broadly more descriptive.
 
-
-
-# openairmaps 0.4.3 (2022-09-12)
+# openairmaps 0.4.3
 
 ## Features
 
@@ -84,15 +106,11 @@
 
 * `trajMap()` and `trajLevelMap()` now use the argument names "latitude" and "longitude" to match those of the `polarMap()` family.
 
-
-
-# openairmaps 0.4.2 (2022-09-12)
+# openairmaps 0.4.2
 
 * `trajLevelMap()` now works where `statistic = "frequency"` without a "pollutant".
 
-
-
-# openairmaps 0.4.1 (2022-09-09)
+# openairmaps 0.4.1
 
 ## Features
 

@@ -2,44 +2,45 @@
 % Please edit documentation in R/addPolarMarkers.R
 \name{addPolarMarkers}
 \alias{addPolarMarkers}
+\alias{addPolarDiffMarkers}
 \title{Add polar markers to leaflet map}
 \usage{
 addPolarMarkers(
   map,
+  data,
+  pollutant,
+  fun = openair::polarPlot,
   lng = NULL,
   lat = NULL,
   layerId = NULL,
   group = NULL,
   popup = NULL,
   label = NULL,
-  data,
-  fun = openair::polarPlot,
+  key = FALSE,
+  d.icon = 200,
+  d.fig = 3.5,
+  ...
+)
+
+addPolarDiffMarkers(
+  map,
+  before,
+  after,
   pollutant,
-  iconWidth = 200,
-  iconHeight = 200,
-  fig.width = 3.5,
-  fig.height = 3.5,
+  lng = NULL,
+  lat = NULL,
+  layerId = NULL,
+  group = NULL,
+  popup = NULL,
+  label = NULL,
+  key = FALSE,
+  d.icon = 200,
+  d.fig = 3.5,
   ...
 )
 }
 \arguments{
-\item{map}{a map widget object created from \code{\link[leaflet:leaflet]{leaflet::leaflet()}}.}
-
-\item{lng}{The decimal longitude.}
-
-\item{lat}{The decimal latitude.}
-
-\item{layerId}{The layer id.}
-
-\item{group}{the name of the group the newly created layers should belong to
-(for \code{\link[leaflet:remove]{leaflet::clearGroup()}} and \code{\link[leaflet:addLayersControl]{leaflet::addLayersControl()}} purposes).
-Human-friendly group names are permitted–they need not be short,
-identifier-style names. Any number of layers and even different types of
-layers (e.g. markers and polygons) can share the same group name.}
-
-\item{popup}{A column of \code{data} to be used as a popup.}
-
-\item{label}{A column of \code{data} to be used as a label.}
+\item{map}{a map widget object created from \code{\link[leaflet]{leaflet}()}}
 
 \item{data}{A data frame. The data frame must contain the data to plot your
 choice of openair directional analysis plot, which includes wind speed
@@ -47,24 +48,51 @@ choice of openair directional analysis plot, which includes wind speed
 concentration of a pollutant. In addition, \code{data} must include a decimal
 latitude and longitude.}
 
+\item{pollutant}{The name of the pollutant to be plot. Note that, if \code{fun = openair::windRose}, you must set \code{pollutant = "ws"}.}
+
 \item{fun}{An \code{openair} directional analysis plotting function. Supported
 functions include \code{\link[openair:polarPlot]{openair::polarPlot()}} (the default),
 \code{\link[openair:polarAnnulus]{openair::polarAnnulus()}}, \code{\link[openair:polarFreq]{openair::polarFreq()}},
 \code{\link[openair:percentileRose]{openair::percentileRose()}}, \code{\link[openair:pollutionRose]{openair::pollutionRose()}} and
-\code{\link[openair:windRose]{openair::windRose()}}.}
+\code{\link[openair:windRose]{openair::windRose()}}. For \code{\link[openair:polarDiff]{openair::polarDiff()}}, use
+\code{\link[=addPolarDiffMarkers]{addPolarDiffMarkers()}}.}
 
-\item{pollutant}{The name of the pollutant to be plot. Note that, if \code{fun = openair::windRose}, you must set \code{pollutant = "ws"}.}
+\item{lng}{The decimal longitude.}
 
-\item{iconWidth}{The actual width of the plot on the map in pixels.}
+\item{lat}{The decimal latitude.}
 
-\item{iconHeight}{The actual height of the plot on the map in pixels.}
+\item{layerId}{the layer id}
 
-\item{fig.width}{The width of the plots to be produced in inches.}
+\item{group}{the name of the group the newly created layers should belong to
+(for \code{\link[leaflet]{clearGroup}} and \code{\link[leaflet]{addLayersControl}} purposes).
+Human-friendly group names are permitted--they need not be short,
+identifier-style names. Any number of layers and even different types of
+layers (e.g. markers and polygons) can share the same group name.}
 
-\item{fig.height}{The height of the plots to be produced in inches.}
+\item{popup}{A column of \code{data} to be used as a popup.}
+
+\item{label}{A column of \code{data} to be used as a label.}
+
+\item{key}{Should a key for each marker be drawn? Default is \code{FALSE}.}
+
+\item{d.icon}{The diameter of the plot on the map in pixels. This will affect
+the size of the individual polar markers. Alternatively, a vector in the
+form \code{c(width, height)} can be provided if a non-circular marker is
+desired.}
+
+\item{d.fig}{The diameter of the plots to be produced using \code{openair} in
+inches. This will affect the resolution of the markers on the map.
+Alternatively, a vector in the form \code{c(width, height)} can be provided if a
+non-circular marker is desired.}
 
 \item{...}{Other arguments for the plotting function (e.g. \code{period} for
 \code{\link[openair:polarAnnulus]{openair::polarAnnulus()}}).}
+
+\item{before}{A data frame that represents the "before" case. See
+\code{\link[openair:polarPlot]{polarPlot()}} for details of different input requirements.}
+
+\item{after}{A data frame that represents the "after" case. See \code{\link[openair:polarPlot]{polarPlot()}}
+for details of different input requirements.}
 }
 \value{
 A leaflet object.
@@ -76,31 +104,45 @@ to add \code{openair} directional analysis plots to any leaflet map and have mor
 control over groups and layerIds than in "all-in-one" functions like
 \code{\link[=polarMap]{polarMap()}}.
 }
+\section{Functions}{
+\itemize{
+\item \code{addPolarMarkers()}: Add any one-table polar marker (e.g.,
+\code{\link[openair:polarPlot]{openair::polarPlot()}})
+
+\item \code{addPolarDiffMarkers()}: Add the two-table \code{\link[openair:polarDiff]{openair::polarDiff()}} marker.
+
+}}
 \examples{
 \dontrun{
 library(leaflet)
 library(openair)
 
+# different types of polar plot on one map
 leaflet() \%>\%
   addTiles() \%>\%
   addPolarMarkers(
     data = polar_data,
-    lat = "latitude",
-    lng = "longitude",
     pollutant = "ws",
     fun = windRose,
     group = "Wind Rose"
   ) \%>\%
   addPolarMarkers(
     data = polar_data,
-    lat = "latitude",
-    lng = "longitude",
     pollutant = "nox",
+    fun = polarPlot,
     group = "Polar Plot"
   ) \%>\%
   addLayersControl(
     baseGroups = c("Wind Rose", "Polar Plot")
   )
-}
 
+# use of polar diff
+leaflet() \%>\%
+  addTiles() \%>\%
+  addPolarDiffMarkers(
+    before = polar_data,
+    after = dplyr::mutate(polar_data, nox = jitter(nox, 5)),
+    pollutant = "nox"
+  )
+}
 }

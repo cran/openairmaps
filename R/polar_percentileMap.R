@@ -44,13 +44,15 @@ percentileMap <- function(data,
                           collapse.control = FALSE,
                           d.icon = 200,
                           d.fig = 3.5,
-                          type = NULL,
+                          type = deprecated(),
                           ...) {
-  if (!is.null(type)) {
-    cli::cli_warn(c(
-      "!" = "{.code type} is deprecated. Different sites are now automatically identified.",
-      "i" = "Please use {.code label} and/or {.code popup} to label sites."
-    ))
+  if (lifecycle::is_present(type)) {
+    lifecycle::deprecate_soft(
+      when = "0.5.0",
+      what = "openairmaps::percentileMap(type)",
+      details = c("Different sites are now automatically detected based on latitude and longitude",
+                  "Please use the `popup` argument to create popups.")
+    )
   }
 
   # assume lat/lon
@@ -62,11 +64,26 @@ percentileMap <- function(data,
   latitude <- latlon$latitude
   longitude <- latlon$longitude
 
+  # cut data
+  data <- quick_cutdata(data = data, type = control)
+
+  # deal with popups
+  if (length(popup) > 1) {
+    data <-
+      quick_popup(
+        data = data,
+        popup = popup,
+        latitude = latitude,
+        longitude = longitude,
+        control = control
+      )
+    popup <- "popup"
+  }
+
   # prep data
   data <-
     prepMapData(
       data = data,
-      type = type,
       pollutant = pollutant,
       control = control,
       "wd",
@@ -186,6 +203,9 @@ percentileMapStatic <- function(data,
   latitude <- latlon$latitude
   longitude <- latlon$longitude
 
+  # cut data
+  data <- quick_cutdata(data = data, type = facet)
+
   # prep data
   data <-
     prepMapData(
@@ -268,8 +288,9 @@ percentileMapStatic <- function(data,
   plt <-
     plt +
     ggplot2::geom_point(
+      data = plots_df,
       ggplot2::aes(.data[[longitude]], .data[[latitude]],
-        fill = intervals[1]
+                   fill = intervals[1]
       ),
       size = 0,
       key_glyph = ggplot2::draw_key_rect

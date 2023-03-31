@@ -31,7 +31,7 @@
 #' @examples
 #' \dontrun{
 #' # NB: "after" is some dummy data to demonstrate functionality
-#' polarDiff(
+#' diffMap(
 #'   before = polar_data,
 #'   after = dplyr::mutate(polar_data, nox = jitter(nox, factor = 5)),
 #'   pollutant = "nox",
@@ -66,13 +66,15 @@ diffMap <- function(before,
                     collapse.control = FALSE,
                     d.icon = 200,
                     d.fig = 3.5,
-                    type = NULL,
+                    type = deprecated(),
                     ...) {
-  if (!is.null(type)) {
-    cli::cli_warn(c(
-      "!" = "{.code type} is deprecated. Different sites are now automatically identified.",
-      "i" = "Please use {.code label} and/or {.code popup} to label sites."
-    ))
+  if (lifecycle::is_present(type)) {
+    lifecycle::deprecate_soft(
+      when = "0.5.0",
+      what = "openairmaps::diffMap(type)",
+      details = c("Different sites are now automatically detected based on latitude and longitude",
+                  "Please use the `popup` argument to create popups.")
+    )
   }
 
   # assume lat/lon
@@ -89,6 +91,23 @@ diffMap <- function(before,
   if (is.null(limits)) {
     theLimits <- NA
   }
+
+  # deal with popups
+  if (length(popup) > 1) {
+    data <-
+      quick_popup(
+        data = before,
+        popup = popup,
+        latitude = latitude,
+        longitude = longitude,
+        control = control
+      )
+    popup <- "popup"
+  }
+
+  # cut data
+  before <- quick_cutdata(data = before, type = control)
+  after <- quick_cutdata(data = after, type = control)
 
   # prep data
   before <-
@@ -253,6 +272,10 @@ diffMapStatic <- function(before,
     theLimits <- NA
   }
 
+  # cut data
+  before <- quick_cutdata(data = before, type = facet)
+  after <- quick_cutdata(data = after, type = facet)
+
   # prep data
   before <-
     prepMapData(
@@ -344,9 +367,10 @@ diffMapStatic <- function(before,
   if (!is.null(limits)) {
     plt <-
       plt +
-      ggplot2::geom_point(data = plots_df,
-                          ggplot2::aes(.data[[longitude]], .data[[latitude]], color = 0),
-                          alpha = 0
+      ggplot2::geom_point(
+        data = plots_df,
+        ggplot2::aes(.data[[longitude]], .data[[latitude]], color = 0),
+        alpha = 0
       ) +
       ggplot2::scale_color_gradientn(
         limits = theLimits,
@@ -375,6 +399,9 @@ create_polar_diffmarkers <-
     # make temp directory
     dir <- tempdir()
 
+    # unique id
+    id <- gsub(" |:|-", "", as.character(Sys.time()))
+
     # sort out popups/labels
     if (is.null(popup)) {
       before$popup <- "NA"
@@ -386,8 +413,8 @@ create_polar_diffmarkers <-
     }
 
     # drop missing data
-    before <- tidyr::drop_na(before, .data[[dropcol]])
-    after <- tidyr::drop_na(after, .data[[dropcol]])
+    before <- tidyr::drop_na(before, dplyr::all_of(dropcol))
+    after <- tidyr::drop_na(after, dplyr::all_of(dropcol))
 
     # get number of rows
     valid_rows <-
@@ -404,7 +431,7 @@ create_polar_diffmarkers <-
       )))
 
     # warn if missing
-    if (nrow(nested_before) != nrow(nested_after)){
+    if (nrow(nested_before) != nrow(nested_after)) {
       warn_df <-
         dplyr::bind_rows(
           dplyr::anti_join(nested_before, nested_after, by = c(latitude, longitude, split_col)),
@@ -422,9 +449,11 @@ create_polar_diffmarkers <-
     # check for popup issues
     if (nrow(nested_before) > valid_rows) {
       cli::cli_abort(
-        c("x" = "Multiple popups/labels per {.code latitude}/{.code longitude}/{.code control} combination.",
+        c(
+          "x" = "Multiple popups/labels per {.code latitude}/{.code longitude}/{.code control} combination.",
           "i" = "Have you used a numeric column, e.g., a pollutant concentration?",
-          "i" = "Consider using {.fun buildPopup} to easily create distinct popups per marker.")
+          "i" = "Consider using {.fun buildPopup} to easily create distinct popups per marker."
+        )
       )
     }
 
@@ -432,10 +461,11 @@ create_polar_diffmarkers <-
     plots_df <-
       dplyr::inner_join(nested_before,
                         nested_after,
-                        by = c(latitude, longitude, split_col)) %>%
+                        by = c(latitude, longitude, split_col)
+      ) %>%
       dplyr::mutate(
         plot = purrr::map2(before, after, fun, .progress = "Creating Polar Markers"),
-        url = paste0(dir, "/", .data[[latitude]], "_", .data[[longitude]], "_", .data[[split_col]], ".png")
+        url = paste0(dir, "/", .data[[latitude]], "_", .data[[longitude]], "_", .data[[split_col]], "_", id, ".png")
       )
 
     # work out w/h
@@ -450,7 +480,7 @@ create_polar_diffmarkers <-
     purrr::pwalk(list(plots_df[[latitude]], plots_df[[longitude]], plots_df[[split_col]], plots_df$plot),
                  .f = ~ {
                    grDevices::png(
-                     filename = paste0(dir, "/", ..1, "_", ..2, "_", ..3, ".png"),
+                     filename = paste0(dir, "/", ..1, "_", ..2, "_", ..3, "_", id, ".png"),
                      width = width * 300,
                      height = height * 300,
                      res = 300,
@@ -462,7 +492,8 @@ create_polar_diffmarkers <-
                    plot(..4)
 
                    grDevices::dev.off()
-                 })
+                 }
+    )
 
     return(plots_df)
   }

@@ -22,14 +22,14 @@
 #' @param latitude,longitude The decimal latitude/longitude. If not provided,
 #'   will be automatically inferred from data by looking for a column named
 #'   "lat"/"latitude" or "lon"/"lng"/"long"/"longitude" (case-insensitively).
-#' @param control Column to be used for splitting the input data into different
-#'   groups which can be selected between using a "layer control" interface.
-#'   Appropriate columns could be those added by [openair::cutData()] or
-#'   [openair::splitByDate()]. `control` cannot be used if multiple `pollutant`
-#'   columns have been provided.
-#' @param popup Column to be used as the HTML content for marker popups. Popups
+#' @param control Used for splitting the input data into different groups which
+#'   can be selected between using a "layer control" interface, passed to the
+#'   `type` argument of [openair::cutData()]. `control` cannot be used if
+#'   multiple `pollutant` columns have been provided.
+#' @param popup Columns to be used as the HTML content for marker popups. Popups
 #'   may be useful to show information about the individual sites (e.g., site
-#'   names, codes, types, etc.).
+#'   names, codes, types, etc.). If a vector of column names are provided they
+#'   are passed to [buildPopup()] using its default values.
 #' @param label Column to be used as the HTML content for hover-over labels.
 #'   Labels are useful for the same reasons as popups, though are typically
 #'   shorter.
@@ -54,8 +54,9 @@
 #'   inches. This will affect the resolution of the markers on the map.
 #'   Alternatively, a vector in the form `c(width, height)` can be provided if a
 #'   non-circular marker is desired.
-#' @param type Deprecated. Please use `label` and/or `popup` to label different
-#'   sites.
+#' @param type `r lifecycle::badge("deprecated")`. Different sites are now
+#'   automatically detected based on latitude and longitude. Please use `label`
+#'   and/or `popup` to label different sites.
 #' @inheritDotParams openair::polarPlot -mydata -pollutant -x -limits -type
 #'   -cols -key -alpha -plot
 #' @return A leaflet object.
@@ -89,13 +90,15 @@ polarMap <- function(data,
                      collapse.control = FALSE,
                      d.icon = 200,
                      d.fig = 3.5,
-                     type = NULL,
+                     type = deprecated(),
                      ...) {
-  if (!is.null(type)) {
-    cli::cli_warn(c(
-      "!" = "{.code type} is deprecated. Different sites are now automatically identified.",
-      "i" = "Please use {.code label} and/or {.code popup} to label sites."
-    ))
+  if (lifecycle::is_present(type)) {
+    lifecycle::deprecate_soft(
+      when = "0.5.0",
+      what = "openairmaps::polarMap(type)",
+      details = c("Different sites are now automatically detected based on latitude and longitude",
+                  "Please use the `popup` argument to create popups.")
+    )
   }
 
   # assume lat/lon
@@ -111,6 +114,22 @@ polarMap <- function(data,
   theLimits <- limits
   if (is.null(limits)) {
     theLimits <- NA
+  }
+
+  # cut data
+  data <- quick_cutdata(data = data, type = control)
+
+  # deal with popups
+  if (length(popup) > 1) {
+    data <-
+      quick_popup(
+        data = data,
+        popup = popup,
+        latitude = latitude,
+        longitude = longitude,
+        control = control
+      )
+    popup <- "popup"
   }
 
   # prep data
@@ -219,10 +238,9 @@ polarMap <- function(data,
 #' @inheritParams polarMap
 #' @param pollutant The column name(s) of the pollutant(s) to plot. If multiple
 #'   pollutants are specified, they will each form part of a separate panel.
-#' @param facet Column to be used for splitting the input data into different
-#'   panels. Appropriate columns could be those added by [openair::cutData()] or
-#'   [openair::splitByDate()]. `facet` cannot be used if multiple `pollutant`
-#'   columns have been provided.
+#' @param facet Used for splitting the input data into different panels, passed
+#'   to the `type` argument of [openair::cutData()]. `facet` cannot be used if
+#'   multiple `pollutant` columns have been provided.
 #' @param zoom The zoom level to use for the basemap, passed to
 #'   [ggmap::get_stamenmap()]. Alternatively, the `ggmap` argument can be used
 #'   for more precise control of the basemap.
@@ -271,6 +289,9 @@ polarMapStatic <- function(data,
   if (is.null(limits)) {
     theLimits <- NA
   }
+
+  # cut data
+  data <- quick_cutdata(data = data, type = facet)
 
   # prep data
   data <-
@@ -349,9 +370,9 @@ polarMapStatic <- function(data,
   if (!is.null(limits)) {
     plt <-
       plt +
-      ggplot2::geom_point(ggplot2::aes(.data[[longitude]], .data[[latitude]], color = 0),
-        alpha = 0
-      ) +
+      ggplot2::geom_point(data = plots_df,
+                          ggplot2::aes(.data[[longitude]], .data[[latitude]], color = 0),
+                          alpha = 0) +
       ggplot2::scale_color_gradientn(
         limits = theLimits,
         colours = openair::openColours(scheme = cols)

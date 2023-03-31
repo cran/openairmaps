@@ -22,7 +22,7 @@ freqMap(
   collapse.control = FALSE,
   d.icon = 200,
   d.fig = 3.5,
-  type = NULL,
+  type = deprecated(),
   ...
 )
 }
@@ -59,15 +59,15 @@ function \code{\link[openair:cutData]{openair::cutData()}} for further details.}
 will be automatically inferred from data by looking for a column named
 "lat"/"latitude" or "lon"/"lng"/"long"/"longitude" (case-insensitively).}
 
-\item{control}{Column to be used for splitting the input data into different
-groups which can be selected between using a "layer control" interface.
-Appropriate columns could be those added by \code{\link[openair:cutData]{openair::cutData()}} or
-\code{\link[openair:splitByDate]{openair::splitByDate()}}. \code{control} cannot be used if multiple \code{pollutant}
-columns have been provided.}
+\item{control}{Used for splitting the input data into different groups which
+can be selected between using a "layer control" interface, passed to the
+\code{type} argument of \code{\link[openair:cutData]{openair::cutData()}}. \code{control} cannot be used if
+multiple \code{pollutant} columns have been provided.}
 
-\item{popup}{Column to be used as the HTML content for marker popups. Popups
+\item{popup}{Columns to be used as the HTML content for marker popups. Popups
 may be useful to show information about the individual sites (e.g., site
-names, codes, types, etc.).}
+names, codes, types, etc.). If a vector of column names are provided they
+are passed to \code{\link[=buildPopup]{buildPopup()}} using its default values.}
 
 \item{label}{Column to be used as the HTML content for hover-over labels.
 Labels are useful for the same reasons as popups, though are typically
@@ -102,8 +102,9 @@ inches. This will affect the resolution of the markers on the map.
 Alternatively, a vector in the form \code{c(width, height)} can be provided if a
 non-circular marker is desired.}
 
-\item{type}{Deprecated. Please use \code{label} and/or \code{popup} to label different
-sites.}
+\item{type}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}. Different sites are now
+automatically detected based on latitude and longitude. Please use \code{label}
+and/or \code{popup} to label different sites.}
 
 \item{...}{
   Arguments passed on to \code{\link[openair:polarFreq]{openair::polarFreq}}

@@ -8,13 +8,15 @@
 [![R-CMD-check](https://github.com/davidcarslaw/openairmaps/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/davidcarslaw/openairmaps/actions/workflows/R-CMD-check.yaml)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/openairmaps)](https://CRAN.R-project.org/package=openairmaps)
+[![Codecov test
+coverage](https://codecov.io/gh/davidcarslaw/openairmaps/branch/master/graph/badge.svg)](https://app.codecov.io/gh/davidcarslaw/openairmaps?branch=master)
 <!-- badges: end -->
 
 The main goal of `{openairmaps}` is to combine the robust analytical
 methods found in [openair](https://davidcarslaw.github.io/openair/) with
 the highly capable `{leaflet}` package. `{openairmaps}` is thoroughly
 documented in the [openair
-book](https://bookdown.org/david_carslaw/openair/maps-overview.html).
+book](https://bookdown.org/david_carslaw/openair/sections/maps/maps-overview.html).
 
 ## Installation
 
@@ -39,7 +41,7 @@ library(openairmaps)
 ```
 
 The `openairmaps` package is thoroughly documented in the [openair
-book](https://bookdown.org/david_carslaw/openair/maps-overview.html),
+book](https://bookdown.org/david_carslaw/openair/sections/maps/maps-overview.html),
 which goes into great detail about its various functions. Functionality
 includes visualising UK AQ networks (`networkMap()`), putting “polar
 directional markers” on maps (e.g., `polarMap()`) and overlaying HYSPLIT
@@ -81,7 +83,7 @@ polar_data %>%
     pollutant = "no2",
     limits = c(0, 180),
     facet = "daylight",
-    alpha = .75, 
+    alpha = .75,
     d.icon = 100,
     d.fig = 2.5
   )

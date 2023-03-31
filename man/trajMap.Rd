@@ -2,7 +2,7 @@
 % Please edit documentation in R/traj_trajMap.R
 \name{trajMap}
 \alias{trajMap}
-\title{Trajectory line plots in leaflet}
+\title{Trajectory line plots in \code{leaflet}}
 \usage{
 trajMap(
   data,
@@ -28,9 +28,9 @@ may be numeric, character or factor. This will commonly be a pollutant
 concentration which has been joined (e.g., by \code{\link[dplyr:mutate-joins]{dplyr::left_join()}}) to the
 trajectory data by "date".}
 
-\item{control}{Column to be used for splitting the trajectories into
-different groups which can be selected between using a "layer control"
-menu.}
+\item{control}{Used for splitting the trajectories into different groups
+which can be selected between using a "layer control" menu. Passed to
+\code{\link[openair:cutData]{openair::cutData()}}.}
 
 \item{cols}{Colours to be used for plotting. Options include "default",
 "increment", "heat", "turbo" and \code{RColorBrewer} colours — see the
@@ -72,7 +72,11 @@ trajMap(traj_data, colour = "nox")
 
 }
 \seealso{
-Other trajectory maps: 
+the original \code{\link[openair:trajPlot]{openair::trajPlot()}}
+
+\code{\link[=trajMapStatic]{trajMapStatic()}} for the static \code{ggplot2} equivalent of \code{\link[=trajMap]{trajMap()}}
+
+Other interactive trajectory maps: 
 \code{\link{trajLevelMap}()}
 }
-\concept{trajectory maps}
+\concept{interactive trajectory maps}

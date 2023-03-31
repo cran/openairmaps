@@ -2,18 +2,22 @@
 % Please edit documentation in R/traj_trajLevelMap.R
 \name{trajLevelMap}
 \alias{trajLevelMap}
-\title{Trajectory level plots in leaflet}
+\title{Trajectory level plots in \code{leaflet}}
 \usage{
 trajLevelMap(
   data,
   longitude = "lon",
   latitude = "lat",
   pollutant,
+  control = "default",
+  smooth = FALSE,
   statistic = "frequency",
   percentile = 90,
   lon.inc = 1,
   lat.inc = 1,
   min.bin = 1,
+  .combine = NA,
+  sigma = 1.5,
   cols = "default",
   alpha = 0.5,
   tile.border = NA,
@@ -26,10 +30,27 @@ trajLevelMap(
 
 \item{latitude, longitude}{The decimal latitude/longitude.}
 
-\item{pollutant}{Pollutant to be plotted.}
+\item{pollutant}{Pollutant to be plotted. By default the trajectory height is
+used.}
 
-\item{statistic}{By default the function will plot the trajectory
-frequencies. There are also various ways of plotting concentrations.
+\item{control}{Used for splitting the trajectories into different groups
+which can be selected between using a "layer control" menu. Passed to
+\code{\link[openair:cutData]{openair::cutData()}}.}
+
+\item{smooth}{Should the trajectory surface be smoothed? Defaults to \code{FALSE}.
+Note that, when \code{smooth = TRUE}, no popup information will be available.}
+
+\item{statistic}{For \code{trajLevel}. By default the function will plot the
+trajectory frequencies.
+
+For \code{trajLevel}, the argument \code{method = "hexbin"} can be used. In
+this case hexagonal binning of the trajectory \emph{points} (i.e. a point
+every three hours along each back trajectory). The plot then shows the
+trajectory frequencies uses hexagonal binning. This is an alternative way
+of viewing trajectory frequencies compared with \code{statistic =
+  "frequency"}.
+
+There are also various ways of plotting concentrations.
 
 It is also possible to set \code{statistic = "difference"}. In this case
 trajectories where the associated concentration is greater than
@@ -39,21 +60,37 @@ comparison is made by comparing the percentage change in gridded
 frequencies. For example, such a plot could show that the top 10\\% of
 concentrations of PM10 tend to originate from air-mass origins to the east.
 
-If \code{statistic = "pscf"} then a Potential Source Contribution Function map
-is produced. If \code{statistic = "cwt"} then the Concentration Weighted
-Trajectory approach is used. If \code{statistic = "saqn"} then Simplified
-Quantitative Transport Bias Analysis is used. See "details" of
-\code{\link[openair:trajLevel]{openair::trajLevel()}} for more information.}
+If \code{statistic = "pscf"} then a Potential Source Contribution Function
+map is produced. If \code{statistic = "cwt"} then concentration weighted
+trajectories are plotted.
 
-\item{percentile}{For \code{\link[openair:trajLevel]{openair::trajLevel()}}. The percentile concentration of
+If \code{statistic = "cwt"} then the Concentration Weighted Trajectory
+approach is used. See details.}
+
+\item{percentile}{For \code{trajLevel}. The percentile concentration of
 \code{pollutant} against which the all trajectories are compared.}
 
-\item{lon.inc}{The longitude-interval to be used for binning data.}
+\item{lon.inc}{The longitude-interval to be used for binning data for
+\code{trajLevel}.}
 
-\item{lat.inc}{The latitude-interval to be used for binning data.}
+\item{lat.inc}{The latitude-interval to be used for binning data when
+\code{trajLevel}.}
 
-\item{min.bin}{The minimum number of unique points in a grid cell. Counts
-below \code{min.bin} are set as missing.}
+\item{min.bin}{For \code{trajLevel} the minimum number of unique points in a
+grid cell. Counts below \code{min.bin} are set as missing. For
+\code{trajLevel} gridded outputs.}
+
+\item{.combine}{When statistic is "SQTBA" it is possible to combine lots of
+receptor locations to derive a single map. \code{.combine} identifies the
+column that differentiates different sites (commonly a column named
+\code{site}). Note that individual site maps are normalised first by
+dividing by their mean value.}
+
+\item{sigma}{For the SQTBA approach \code{sigma} determines the amount of
+back trajectory spread based on the Gaussian plume equation. Values in the
+literature suggest 5.4 km after one hour. However, testing suggests lower
+values reveal source regions more effectively while not introducing too
+much noise.}
 
 \item{cols}{Colours to be used for plotting. Options include "default",
 "increment", "heat", "turbo" and \code{RColorBrewer} colours — see the
@@ -66,10 +103,9 @@ user can supply a list of colour names recognised by R (type
 \item{tile.border}{Colour to use for the border of binned tiles. Defaults to
 \code{NA}, which draws no border.}
 
-\item{provider}{The base map(s) to be used. See
+\item{provider}{The base map to be used. See
 \url{http://leaflet-extras.github.io/leaflet-providers/preview/} for a list of
-all base maps that can be used. If multiple base maps are provided, they
-can be toggled between using a "layer control" interface.}
+all base maps that can be used.}
 }
 \value{
 A leaflet object.
@@ -85,7 +121,11 @@ trajLevelMap(traj_data, pollutant = "pm2.5", statistic = "pscf", min.bin = 10)
 
 }
 \seealso{
-Other trajectory maps: 
+the original \code{\link[openair:trajLevel]{openair::trajLevel()}}
+
+\code{\link[=trajLevelMapStatic]{trajLevelMapStatic()}} for the static \code{ggplot2} equivalent of \code{\link[=trajLevelMap]{trajLevelMap()}}
+
+Other interactive trajectory maps: 
 \code{\link{trajMap}()}
 }
-\concept{trajectory maps}
+\concept{interactive trajectory maps}

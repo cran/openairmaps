@@ -7,13 +7,13 @@
 polarMapStatic(
   data,
   pollutant = NULL,
+  ggmap,
   x = "ws",
-  facet = NULL,
-  limits = NULL,
+  limits = "free",
+  upper = "fixed",
   latitude = NULL,
   longitude = NULL,
-  zoom = 13,
-  ggmap = NULL,
+  facet = NULL,
   cols = "turbo",
   alpha = 1,
   key = FALSE,
@@ -33,29 +33,35 @@ longitude.}
 \item{pollutant}{The column name(s) of the pollutant(s) to plot. If multiple
 pollutants are specified, they will each form part of a separate panel.}
 
+\item{ggmap}{A \code{ggmap} object obtained using \code{\link[ggmap:get_map]{ggmap::get_map()}} or a similar
+function to use as the basemap.}
+
 \item{x}{The radial axis variable to plot.}
 
-\item{facet}{Used for splitting the input data into different panels, passed
-to the \code{type} argument of \code{\link[openair:cutData]{openair::cutData()}}. \code{facet} cannot be used if
-multiple \code{pollutant} columns have been provided.}
+\item{limits}{One of:
+\itemize{
+\item \code{"fixed"} which ensures all of the markers use the same colour scale.
+\item \code{"free"} (the default) which allows all of the markers to use different
+colour scales.
+\item A numeric vector in the form \code{c(lower, upper)} used to define the colour
+scale. For example, \code{limits = c(0, 100)} would force the plot limits to
+span 0-100.
+}}
 
-\item{limits}{By default, each individual polar marker has its own colour
-scale. The \code{limits} argument will force all markers to use the same colour
-scale. The limits are set in the form \code{c(lower, upper)}, so \code{limits = c(0, 100)} would force the plot limits to span 0-100.}
+\item{upper}{One of:
+\itemize{
+\item \code{"fixed"} (the default) which ensures all of the markers use the same radial axis scale.
+\item \code{"free"} which allows all of the markers to use different radial axis scales.
+\item A numeric value, used as the upper limit for the radial axis scale.
+}}
 
 \item{latitude, longitude}{The decimal latitude/longitude. If not provided,
 will be automatically inferred from data by looking for a column named
 "lat"/"latitude" or "lon"/"lng"/"long"/"longitude" (case-insensitively).}
 
-\item{zoom}{The zoom level to use for the basemap, passed to
-\code{\link[ggmap:get_stamenmap]{ggmap::get_stamenmap()}}. Alternatively, the \code{ggmap} argument can be used
-for more precise control of the basemap.}
-
-\item{ggmap}{By default, \code{openairmaps} will try to estimate an appropriate
-bounding box for the input data and then run \code{\link[ggmap:get_stamenmap]{ggmap::get_stamenmap()}} to
-import a basemap. The \code{ggmap} argument allows users to provide their own
-\code{ggmap} object to override this, which allows for alternative bounding
-boxes, map types and colours.}
+\item{facet}{Used for splitting the input data into different panels, passed
+to the \code{type} argument of \code{\link[openair:cutData]{openair::cutData()}}. \code{facet} cannot be used if
+multiple \code{pollutant} columns have been provided.}
 
 \item{cols}{The colours used for plotting. See \code{\link[openair:openColours]{openair::openColours()}} for
 more information.}
@@ -197,14 +203,10 @@ circumstances.}
 are removed on the plots. This is done by shading the missing data in
 \code{mis.col}. To not highlight missing data when \code{min.bin} > 1
 choose \code{mis.col = "transparent"}.}
-    \item{\code{upper}}{This sets the upper limit wind speed to be used. Often there are
-only a relatively few data points at very high wind speeds and plotting all
-of them can reduce the useful information in the plot.}
     \item{\code{angle.scale}}{Sometimes the placement of the scale may interfere with an
-interesting feature. The user can therefore set \code{angle.scale} to
-any value between 0 and 360 degrees to mitigate such problems. For
-example \code{angle.scale = 45} will draw the scale heading in a NE
-direction.}
+interesting feature. The user can therefore set \code{angle.scale} to any
+value between 0 and 360 degrees to mitigate such problems. For example
+\code{angle.scale = 45} will draw the scale heading in a NE direction.}
     \item{\code{units}}{The units shown on the polar axis scale.}
     \item{\code{force.positive}}{The default is \code{TRUE}. Sometimes if smoothing data
 with steep gradients it is possible for predicted values to be negative.
@@ -258,6 +260,8 @@ regression statistics are used such as \emph{r}. Default is \code{4}.}
     \item{\code{kernel}}{Type of kernel used for the weighting procedure for when
 correlation or regression techniques are used. Only \code{"gaussian"} is
 supported but this may be enhanced in the future.}
+    \item{\code{formula.label}}{When pair-wise statistics such as regression slopes are
+calculated and plotted, should a formula label be displayed?}
     \item{\code{tau}}{The quantile to be estimated when \code{statistic} is set to
 \code{"quantile.slope"}. Default is \code{0.5} which is equal to the median
 and will be ignored if \code{"quantile.slope"} is not used.}

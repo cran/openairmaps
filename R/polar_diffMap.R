@@ -42,7 +42,7 @@ diffMap <- function(before,
                     after,
                     pollutant = NULL,
                     x = "ws",
-                    limits = NULL,
+                    limits = "free",
                     latitude = NULL,
                     longitude = NULL,
                     control = NULL,
@@ -72,8 +72,10 @@ diffMap <- function(before,
     lifecycle::deprecate_soft(
       when = "0.5.0",
       what = "openairmaps::diffMap(type)",
-      details = c("Different sites are now automatically detected based on latitude and longitude",
-                  "Please use the `popup` argument to create popups.")
+      details = c(
+        "Different sites are now automatically detected based on latitude and longitude",
+        "Please use the `popup` argument to create popups."
+      )
     )
   }
 
@@ -86,10 +88,43 @@ diffMap <- function(before,
   latitude <- latlon$latitude
   longitude <- latlon$longitude
 
-  # deal with limits
-  theLimits <- limits
-  if (is.null(limits)) {
+  # auto limits
+  if ("fixed" %in% limits) {
+    cli::cli_abort("{.code limits = 'fixed'} is currently not supported for {.fun diffMap} and {.fun diffMapStatic}.")
+    # if (length(pollutant) == 1) {
+    #   before <-
+    #     dplyr::mutate(before, latlng = paste(.data[[latitude]], .data[[longitude]]))
+    #   after <-
+    #     dplyr::mutate(after, latlng = paste(.data[[latitude]], .data[[longitude]]))
+    #
+    #   type <- control
+    #   if (is.null(control)) {
+    #     type <- "default"
+    #   }
+    #
+    #   testplots <-
+    #     openair::polarDiff(
+    #       before = before, after = after,
+    #       pollutant = pollutant,
+    #       x = x,
+    #       type = c("latlng", type),
+    #       plot = FALSE,
+    #       ...
+    #     )$data
+    #
+    #   theLimits <- range(testplots[[pollutant]], na.rm = TRUE)
+    # } else {
+    #   cli::cli_warn("{.code limits == 'auto'} only works with a single given {.field pollutant}")
+    # }
+  } else if ("free" %in% limits) {
     theLimits <- NA
+  } else if (is.numeric(limits)){
+    theLimits <- limits
+  } else {
+    cli::cli_abort(
+      c("!" = "Do not recognise {.field limits} value of {.code {limits}}",
+        "i" = "{.field limits} should be one of {.code 'fixed'}, {.code 'free'} or a numeric vector of length 2.")
+    )
   }
 
   # deal with popups
@@ -191,7 +226,7 @@ diffMap <- function(before,
     )
 
   # add legend if limits are set
-  if (!is.null(limits) & all(!is.na(limits)) & draw.legend) {
+  if (!all(is.na(theLimits)) & draw.legend) {
     map <-
       leaflet::addLegend(
         map,
@@ -233,13 +268,12 @@ diffMap <- function(before,
 diffMapStatic <- function(before,
                           after,
                           pollutant = NULL,
+                          ggmap,
+                          limits = "free",
                           x = "ws",
-                          facet = NULL,
-                          limits = NULL,
                           latitude = NULL,
                           longitude = NULL,
-                          zoom = 13,
-                          ggmap = NULL,
+                          facet = NULL,
                           cols = c(
                             "#002F70",
                             "#3167BB",
@@ -257,6 +291,9 @@ diffMapStatic <- function(before,
                           d.icon = 150,
                           d.fig = 3,
                           ...) {
+  # check that there is a ggmap
+  check_ggmap(missing(ggmap))
+
   # assume lat/lon
   latlon <- assume_latlon(
     data = before,
@@ -266,10 +303,43 @@ diffMapStatic <- function(before,
   latitude <- latlon$latitude
   longitude <- latlon$longitude
 
-  # deal with limits
-  theLimits <- limits
-  if (is.null(limits)) {
+  # auto limits
+  if ("fixed" %in% limits) {
+    cli::cli_abort("{.code limits = 'fixed'} is currently not supported for {.fun diffMap} and {.fun diffMapStatic}.")
+    # if (length(pollutant) == 1) {
+    #   before <-
+    #     dplyr::mutate(before, latlng = paste(.data[[latitude]], .data[[longitude]]))
+    #   after <-
+    #     dplyr::mutate(after, latlng = paste(.data[[latitude]], .data[[longitude]]))
+    #
+    #   type <- facet
+    #   if (is.null(facet)) {
+    #     type <- "default"
+    #   }
+    #
+    #   testplots <-
+    #     openair::polarDiff(
+    #       before = before, after = after,
+    #       pollutant = pollutant,
+    #       x = x,
+    #       type = c("latlng", type),
+    #       plot = FALSE,
+    #       ...
+    #     )$data
+    #
+    #   theLimits <- range(testplots[[pollutant]], na.rm = TRUE)
+    # } else {
+    #   cli::cli_warn("{.code limits == 'auto'} only works with a single given {.field pollutant}")
+    # }
+  } else if ("free" %in% limits) {
     theLimits <- NA
+  } else if (is.numeric(limits)){
+    theLimits <- limits
+  } else {
+    cli::cli_abort(
+      c("!" = "Do not recognise {.field limits} value of {.code {limits}}",
+        "i" = "{.field limits} should be one of {.code 'fixed'}, {.code 'free'} or a numeric vector of length 2.")
+    )
   }
 
   # cut data
@@ -339,16 +409,6 @@ diffMapStatic <- function(before,
       d.fig = d.fig
     )
 
-  # load ggmap if not provided
-  ggmap <-
-    estimate_ggmap(
-      ggmap = ggmap,
-      data = plots_df,
-      latitude = latitude,
-      longitude = longitude,
-      zoom = zoom
-    )
-
   # create static map - deals with basics & facets
   plt <-
     create_static_map(
@@ -364,7 +424,7 @@ diffMapStatic <- function(before,
     )
 
   # create colorbar if limits specified
-  if (!is.null(limits)) {
+  if (!all(is.na(theLimits))) {
     plt <-
       plt +
       ggplot2::geom_point(
@@ -460,8 +520,8 @@ create_polar_diffmarkers <-
     # create plots
     plots_df <-
       dplyr::inner_join(nested_before,
-                        nested_after,
-                        by = c(latitude, longitude, split_col)
+        nested_after,
+        by = c(latitude, longitude, split_col)
       ) %>%
       dplyr::mutate(
         plot = purrr::map2(before, after, fun, .progress = "Creating Polar Markers"),
@@ -478,21 +538,21 @@ create_polar_diffmarkers <-
     }
 
     purrr::pwalk(list(plots_df[[latitude]], plots_df[[longitude]], plots_df[[split_col]], plots_df$plot),
-                 .f = ~ {
-                   grDevices::png(
-                     filename = paste0(dir, "/", ..1, "_", ..2, "_", ..3, "_", id, ".png"),
-                     width = width * 300,
-                     height = height * 300,
-                     res = 300,
-                     bg = "transparent",
-                     type = "cairo",
-                     antialias = "none"
-                   )
+      .f = ~ {
+        grDevices::png(
+          filename = paste0(dir, "/", ..1, "_", ..2, "_", ..3, "_", id, ".png"),
+          width = width * 300,
+          height = height * 300,
+          res = 300,
+          bg = "transparent",
+          type = "cairo",
+          antialias = "none"
+        )
 
-                   plot(..4)
+        plot(..4)
 
-                   grDevices::dev.off()
-                 }
+        grDevices::dev.off()
+      }
     )
 
     return(plots_df)

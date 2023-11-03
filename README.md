@@ -1,15 +1,13 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# openairmaps: tools to create maps of air pollution data <img src="man/figures/logo.png" align="right" height="134" />
+# openairmaps: tools to create maps of air pollution data <img src="man/figures/logo.png" align="right" height="134" alt="the openairmaps logo. It shows a stylised pollution rose overlaid with a typical teardrop shaped map marker." />
 
 <!-- badges: start -->
 
 [![R-CMD-check](https://github.com/davidcarslaw/openairmaps/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/davidcarslaw/openairmaps/actions/workflows/R-CMD-check.yaml)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/openairmaps)](https://CRAN.R-project.org/package=openairmaps)
-[![Codecov test
-coverage](https://codecov.io/gh/davidcarslaw/openairmaps/branch/master/graph/badge.svg)](https://app.codecov.io/gh/davidcarslaw/openairmaps?branch=master)
 <!-- badges: end -->
 
 The main goal of `{openairmaps}` is to combine the robust analytical
@@ -30,8 +28,8 @@ You can install the development version of `{openairmaps}` from GitHub
 with:
 
 ``` r
-# install.packages("devtools")
-devtools::install_github("davidcarslaw/openairmaps")
+# install.packages("pak")
+pak::pak("davidcarslaw/openairmaps")
 ```
 
 ## Overview
@@ -64,8 +62,14 @@ polar_data %>%
   )
 ```
 
-![An example `polarMap()` showing NO2 concentrations in central
-London.](man/figures/README-examplemap.png)
+<div class="figure">
+
+<img src="man/figures/README-examplemap.png" alt="A screenshot of a leaflet map. It shows an OpenStreetMap map layer, overlaid with bivariate polar plots. Polar plots are visualisations on polar coordinates with wind direction on the spoke axes, wind speed on the radial axes, and a smooth surface showing pollutant concentrations. A menu is found at the top-right of the map, which allows users to swap between daylight and nighttime observations." width="100%" />
+<p class="caption">
+An example `polarMap()` showing NO2 concentrations in central London.
+</p>
+
+</div>
 
 While an interactive map is preferred for exploratory directional
 analysis, it is limited to the HTML format. Some applications (for
@@ -76,17 +80,6 @@ of being written in `{ggplot2}` is that additional layers can be added
 (e.g., `geom_label()` could be used to label sites) and limited further
 customisation is available using `theme()` and `guides()`.
 
-``` r
-polar_data %>%
-  openair::cutData("daylight") %>%
-  polarMapStatic(
-    pollutant = "no2",
-    limits = c(0, 180),
-    facet = "daylight",
-    alpha = .75,
-    d.icon = 100,
-    d.fig = 2.5
-  )
-```
-
-<img src="man/figures/README-static-1.png" width="100%" />
+Static maps require users to provide a
+[ggmap](https://github.com/dkahle/ggmap) tileset, which at the time of
+writing requires an API key for either Google or Stadia Maps.

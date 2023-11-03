@@ -62,8 +62,10 @@ pollroseMap <- function(data,
     lifecycle::deprecate_soft(
       when = "0.5.0",
       what = "openairmaps::pollroseMap(type)",
-      details = c("Different sites are now automatically detected based on latitude and longitude",
-                  "Please use the `popup` argument to create popups.")
+      details = c(
+        "Different sites are now automatically detected based on latitude and longitude",
+        "Please use the `popup` argument to create popups."
+      )
     )
   }
 
@@ -213,13 +215,12 @@ pollroseMap <- function(data,
 #' @export
 pollroseMapStatic <- function(data,
                               pollutant = NULL,
+                              ggmap,
                               statistic = "prop.count",
                               breaks = NULL,
                               facet = NULL,
                               latitude = NULL,
                               longitude = NULL,
-                              zoom = 13,
-                              ggmap = NULL,
                               cols = "turbo",
                               alpha = 1,
                               key = FALSE,
@@ -227,6 +228,9 @@ pollroseMapStatic <- function(data,
                               d.icon = 150,
                               d.fig = 3,
                               ...) {
+  # check that there is a ggmap
+  check_ggmap(missing(ggmap))
+
   # assume lat/lon
   latlon <- assume_latlon(
     data = data,
@@ -296,16 +300,6 @@ pollroseMapStatic <- function(data,
       longitude = longitude,
       split_col = split_col,
       d.fig = d.fig
-    )
-
-  # load ggmap if not provided
-  ggmap <-
-    estimate_ggmap(
-      ggmap = ggmap,
-      data = plots_df,
-      latitude = latitude,
-      longitude = longitude,
-      zoom = zoom
     )
 
   # create static map - deals with basics & facets

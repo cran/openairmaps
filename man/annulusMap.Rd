@@ -8,7 +8,7 @@ annulusMap(
   data,
   pollutant = NULL,
   period = "hour",
-  limits = NULL,
+  limits = "free",
   latitude = NULL,
   longitude = NULL,
   control = NULL,
@@ -42,9 +42,15 @@ control" interface.}
 variation throughout the year, "weekday" to plot day of the week variation
 and "trend" to plot the trend by wind direction.}
 
-\item{limits}{By default, each individual polar marker has its own colour
-scale. The \code{limits} argument will force all markers to use the same colour
-scale. The limits are set in the form \code{c(lower, upper)}, so \code{limits = c(0, 100)} would force the plot limits to span 0-100.}
+\item{limits}{One of:
+\itemize{
+\item \code{"fixed"} which ensures all of the markers use the same colour scale.
+\item \code{"free"} (the default) which allows all of the markers to use different
+colour scales.
+\item A numeric vector in the form \code{c(lower, upper)} used to define the colour
+scale. For example, \code{limits = c(0, 100)} would force the plot limits to
+span 0-100.
+}}
 
 \item{latitude, longitude}{The decimal latitude/longitude. If not provided,
 will be automatically inferred from data by looking for a column named
@@ -67,7 +73,9 @@ shorter.}
 \item{provider}{The base map(s) to be used. See
 \url{http://leaflet-extras.github.io/leaflet-providers/preview/} for a list of
 all base maps that can be used. If multiple base maps are provided, they
-can be toggled between using a "layer control" interface.}
+can be toggled between using a "layer control" interface. By default, the
+interface will use the provider names as labels, but users can define their
+own using a named vector (e.g., \code{c("Default" = "OpenStreetMap", "Satellite" = "Esri.WorldImagery")})}
 
 \item{cols}{The colours used for plotting. See \code{\link[openair:openColours]{openair::openColours()}} for
 more information.}

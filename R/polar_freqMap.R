@@ -19,11 +19,15 @@
 #'   contribution to the total concentration. Note that for options other than
 #'   "frequency", it is necessary to also provide the name of a pollutant. See
 #'   function [openair::cutData()] for further details.
-#' @param breaks The user can provide their own scale. breaks expects a sequence
-#'   of numbers that define the range of the scale. The sequence could represent
-#'   one with equal spacing, e.g., `breaks = seq(0, 100, 10)` - a scale from
-#'   0-10 in intervals of 10, or a more flexible sequence, e.g., `breaks = c(0,
-#'   1, 5, 7, 10)`, which may be useful for some situations.
+#' @param breaks One of:
+#' - `"fixed"` which ensures all of the markers use the same colour scale.
+#' - `"free"` (the default) which allows all of the markers to use different
+#'   colour scales.
+#' - A numeric vector defining a sequence of numbers to use as the breaks. The
+#'   sequence could represent one with equal spacing, e.g., `breaks = seq(0,
+#'   100, 10)` - a scale from 0-10 in intervals of 10, or a more flexible
+#'   sequence, e.g., `breaks = c(0, 1, 5, 7, 10)`, which may be useful for some
+#'   situations.
 #' @param draw.legend When `breaks` are specified, should a shared legend be
 #'   created at the side of the map? Default is `TRUE`.
 #' @inheritDotParams openair::polarFreq -mydata -pollutant -statistic -breaks
@@ -32,8 +36,7 @@
 #' @export
 #'
 #' @seealso the original [openair::polarFreq()]
-#' @seealso [freqMapStatic()] for the static `ggmap` equivalent of
-#'   [freqMap()]
+#' @seealso [freqMapStatic()] for the static `ggmap` equivalent of [freqMap()]
 #'
 #' @examples
 #' \dontrun{
@@ -45,8 +48,8 @@
 #' }
 freqMap <- function(data,
                     pollutant = NULL,
-                    breaks = NULL,
                     statistic = "mean",
+                    breaks = "free",
                     latitude = NULL,
                     longitude = NULL,
                     control = NULL,
@@ -66,17 +69,17 @@ freqMap <- function(data,
     lifecycle::deprecate_soft(
       when = "0.5.0",
       what = "openairmaps::freqMap(type)",
-      details = c("Different sites are now automatically detected based on latitude and longitude",
-                  "Please use the `popup` argument to create popups.")
+      details = c(
+        "Different sites are now automatically detected based on latitude and longitude",
+        "Please use the `popup` argument to create popups."
+      )
     )
   }
 
   # assume lat/lon
-  latlon <- assume_latlon(
-    data = data,
-    latitude = latitude,
-    longitude = longitude
-  )
+  latlon <- assume_latlon(data = data,
+                          latitude = latitude,
+                          longitude = longitude)
   latitude <- latlon$latitude
   longitude <- latlon$longitude
 
@@ -84,6 +87,41 @@ freqMap <- function(data,
   if (statistic == "frequency") {
     data$dummy <- "freq"
     pollutant <- "dummy"
+  }
+
+  # auto limits
+  breaks <- check_multipoll(breaks, pollutant)
+
+  if ("fixed" %in% breaks) {
+    data <-
+      dplyr::mutate(data, latlng = paste(.data[[latitude]], .data[[longitude]]))
+
+    type <- control
+    if (is.null(control)) {
+      type <- "default"
+    }
+
+    testplots <-
+      openair::polarFreq(
+        data,
+        pollutant = pollutant,
+        statistic = statistic,
+        trans = FALSE,
+        type = c("latlng", type),
+        plot = FALSE,
+        ...
+      )$data
+
+    theBreaks <- pretty(testplots$weights, n = 10)
+  } else if ("free" %in% breaks) {
+    theBreaks <- NA
+  } else if (is.numeric(breaks)) {
+    theBreaks <- breaks
+  } else {
+    cli::cli_abort(
+      c("!" = "Do not recognise {.field breaks} value of {.code {breaks}}",
+        "i" = "{.field breaks} should be one of {.code 'fixed'}, {.code 'free'} or a numeric vector.")
+    )
   }
 
   # cut data
@@ -128,11 +166,11 @@ freqMap <- function(data,
 
   # define function
   fun <- function(data) {
-    if (!is.null(breaks)) {
+    if (!"free" %in% breaks) {
       openair::polarFreq(
         data,
         pollutant = "conc",
-        breaks = breaks,
+        breaks = theBreaks,
         plot = FALSE,
         statistic = statistic,
         cols = cols,
@@ -171,10 +209,20 @@ freqMap <- function(data,
 
   # create leaflet map
   map <-
-    make_leaflet_map(plots_df, latitude, longitude, provider, d.icon, popup, label, split_col, collapse.control)
+    make_leaflet_map(
+      plots_df,
+      latitude,
+      longitude,
+      provider,
+      d.icon,
+      popup,
+      label,
+      split_col,
+      collapse.control
+    )
 
   # add legends if breaks are set
-  if (!is.null(breaks) & draw.legend) {
+  if (!all(is.na(theBreaks)) & draw.legend) {
     if (statistic == "frequency") {
       title <- "Frequency"
     } else {
@@ -185,9 +233,10 @@ freqMap <- function(data,
         map,
         pal = leaflet::colorBin(
           palette = openair::openColours(scheme = cols),
-          domain = breaks, bins = breaks
+          domain = theBreaks,
+          bins = theBreaks
         ),
-        values = breaks,
+        values = theBreaks,
         title = title
       )
   }
@@ -207,6 +256,7 @@ freqMap <- function(data,
 #' @family static directional analysis maps
 #'
 #' @inheritParams polarMapStatic
+#' @inheritParams freqMap
 #' @param statistic The statistic that should be applied to each wind
 #'   speed/direction bin. Can be "frequency", "mean", "median", "max" (maximum),
 #'   "stdev" (standard deviation) or "weighted.mean". The option "frequency" is
@@ -219,11 +269,6 @@ freqMap <- function(data,
 #'   contribution to the total concentration. Note that for options other than
 #'   "frequency", it is necessary to also provide the name of a pollutant. See
 #'   function [openair::cutData()] for further details.
-#' @param breaks The user can provide their own scale. breaks expects a sequence
-#'   of numbers that define the range of the scale. The sequence could represent
-#'   one with equal spacing, e.g., `breaks = seq(0, 100, 10)` - a scale from
-#'   0-10 in intervals of 10, or a more flexible sequence, e.g., `breaks = c(0,
-#'   1, 5, 7, 10)`, which may be useful for some situations.
 #' @inheritDotParams openair::polarFreq -mydata -pollutant -statistic -breaks
 #'   -type -cols -key -plot
 #'
@@ -235,14 +280,12 @@ freqMap <- function(data,
 #' @export
 freqMapStatic <- function(data,
                           pollutant = NULL,
-                          breaks = NULL,
+                          ggmap,
                           statistic = "mean",
-                          facet = NULL,
-                          limits = NULL,
+                          breaks = "free",
                           latitude = NULL,
                           longitude = NULL,
-                          zoom = 13,
-                          ggmap = NULL,
+                          facet = NULL,
                           cols = "turbo",
                           alpha = 1,
                           key = FALSE,
@@ -250,12 +293,13 @@ freqMapStatic <- function(data,
                           d.icon = 150,
                           d.fig = 3,
                           ...) {
+  # check that there is a ggmap
+  check_ggmap(missing(ggmap))
+
   # assume lat/lon
-  latlon <- assume_latlon(
-    data = data,
-    latitude = latitude,
-    longitude = longitude
-  )
+  latlon <- assume_latlon(data = data,
+                          latitude = latitude,
+                          longitude = longitude)
   latitude <- latlon$latitude
   longitude <- latlon$longitude
 
@@ -266,6 +310,41 @@ freqMapStatic <- function(data,
     pollutant <- "dummy"
   } else {
     lab <- pollutant
+  }
+
+  # auto limits
+  breaks <- check_multipoll(breaks, pollutant)
+
+  if ("fixed" %in% breaks) {
+    data <-
+      dplyr::mutate(data, latlng = paste(.data[[latitude]], .data[[longitude]]))
+
+    type <- facet
+    if (is.null(facet)) {
+      type <- "default"
+    }
+
+    testplots <-
+      openair::polarFreq(
+        data,
+        pollutant = pollutant,
+        statistic = statistic,
+        trans = FALSE,
+        type = c("latlng", type),
+        plot = FALSE,
+        ...
+      )$data
+
+    theBreaks <- pretty(testplots$weights, n = 10)
+  } else if ("free" %in% breaks) {
+    theBreaks <- NA
+  } else if (is.numeric(breaks)) {
+    theBreaks <- breaks
+  } else {
+    cli::cli_abort(
+      c("!" = "Do not recognise {.field breaks} value of {.code {breaks}}",
+        "i" = "{.field breaks} should be one of {.code 'fixed'}, {.code 'free'} or a numeric vector.")
+    )
   }
 
   # cut data
@@ -295,11 +374,11 @@ freqMapStatic <- function(data,
 
   # define function
   fun <- function(data) {
-    if (!is.null(breaks)) {
+    if (!"free" %in% breaks) {
       openair::polarFreq(
         data,
         pollutant = "conc",
-        breaks = breaks,
+        breaks = theBreaks,
         plot = FALSE,
         statistic = statistic,
         cols = cols,
@@ -334,16 +413,6 @@ freqMapStatic <- function(data,
       d.fig = d.fig
     )
 
-  # load ggmap if not provided
-  ggmap <-
-    estimate_ggmap(
-      ggmap = ggmap,
-      data = plots_df,
-      latitude = latitude,
-      longitude = longitude,
-      zoom = zoom
-    )
-
   # create static map - deals with basics & facets
   plt <-
     create_static_map(
@@ -359,21 +428,21 @@ freqMapStatic <- function(data,
     )
 
   # create legend
-  if (!is.null(breaks)) {
-    intervals <- stringr::str_c(breaks, dplyr::lead(breaks), sep = " - ")
+  if (!all(is.na(theBreaks))) {
+    intervals <-
+      stringr::str_c(theBreaks, dplyr::lead(theBreaks), sep = " - ")
     intervals <- intervals[!is.na(intervals)]
     intervals <- factor(intervals, intervals)
-    pal <- openair::openColours(scheme = cols, n = length(intervals)) %>%
+    pal <-
+      openair::openColours(scheme = cols, n = length(intervals)) %>%
       stats::setNames(intervals)
 
     plt <-
       plt +
       ggplot2::geom_point(
         data = plots_df,
-        ggplot2::aes(
-          .data[[longitude]], .data[[latitude]],
-          fill = intervals[1]
-        ),
+        ggplot2::aes(.data[[longitude]], .data[[latitude]],
+                     fill = intervals[1]),
         size = 0,
         key_glyph = ggplot2::draw_key_rect
       ) +

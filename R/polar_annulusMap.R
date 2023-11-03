@@ -31,7 +31,7 @@
 annulusMap <- function(data,
                        pollutant = NULL,
                        period = "hour",
-                       limits = NULL,
+                       limits = "free",
                        latitude = NULL,
                        longitude = NULL,
                        control = NULL,
@@ -51,23 +51,53 @@ annulusMap <- function(data,
     lifecycle::deprecate_soft(
       when = "0.5.0",
       what = "openairmaps::annulusMap(type)",
-      details = c("Different sites are now automatically detected based on latitude and longitude",
-                  "Please use the `popup` argument to create popups.")
+      details = c(
+        "Different sites are now automatically detected based on latitude and longitude",
+        "Please use the `popup` argument to create popups."
+      )
     )
   }
 
   # assume lat/lon
-  latlon <- assume_latlon(
-    data = data,
-    latitude = latitude,
-    longitude = longitude
-  )
+  latlon <- assume_latlon(data = data,
+                          latitude = latitude,
+                          longitude = longitude)
   latitude <- latlon$latitude
   longitude <- latlon$longitude
 
-  # deal with limits
-  theLimits <- limits
-  if (is.null(limits)) theLimits <- NA
+  # auto limits
+  limits <- check_multipoll(limits, pollutant)
+
+  if ("fixed" %in% limits) {
+    data <-
+      dplyr::mutate(data, latlng = paste(.data[[latitude]], .data[[longitude]]))
+
+    type <- control
+    if (is.null(control)) {
+      type <- "default"
+    }
+
+    testplots <-
+      openair::polarAnnulus(
+        data,
+        pollutant = pollutant,
+        period = period,
+        type = c("latlng", type),
+        plot = FALSE,
+        ...
+      )$data
+
+    theLimits <- range(testplots$z, na.rm = TRUE)
+  } else if ("free" %in% limits) {
+    theLimits <- NA
+  } else if (is.numeric(limits)) {
+    theLimits <- limits
+  } else {
+    cli::cli_abort(
+      c("!" = "Do not recognise {.field limits} value of {.code {limits}}",
+        "i" = "{.field limits} should be one of {.code 'fixed'}, {.code 'free'} or a numeric vector of length 2.")
+    )
+  }
 
   # cut data
   data <- quick_cutdata(data = data, type = control)
@@ -111,7 +141,7 @@ annulusMap <- function(data,
 
   # define function
   fun <- function(data) {
-    if (!is.null(limits)) {
+    if (!"free" %in% limits) {
       openair::polarAnnulus(
         data,
         pollutant = "conc",
@@ -154,10 +184,20 @@ annulusMap <- function(data,
 
   # create leaflet map
   map <-
-    make_leaflet_map(plots_df, latitude, longitude, provider, d.icon, popup, label, split_col, collapse.control)
+    make_leaflet_map(
+      plots_df,
+      latitude,
+      longitude,
+      provider,
+      d.icon,
+      popup,
+      label,
+      split_col,
+      collapse.control
+    )
 
   # add legend if limits are set
-  if (!is.null(limits) & all(!is.na(limits)) & draw.legend) {
+  if (!all(is.na(theLimits)) & draw.legend) {
     map <-
       leaflet::addLegend(
         map,
@@ -201,13 +241,12 @@ annulusMap <- function(data,
 #' @export
 annulusMapStatic <- function(data,
                              pollutant = NULL,
+                             ggmap,
                              period = "hour",
                              facet = NULL,
-                             limits = NULL,
+                             limits = "free",
                              latitude = NULL,
                              longitude = NULL,
-                             zoom = 13,
-                             ggmap = NULL,
                              cols = "turbo",
                              alpha = 1,
                              key = FALSE,
@@ -215,19 +254,48 @@ annulusMapStatic <- function(data,
                              d.icon = 150,
                              d.fig = 3,
                              ...) {
+  # check that there is a ggmap
+  check_ggmap(missing(ggmap))
+
   # assume lat/lon
-  latlon <- assume_latlon(
-    data = data,
-    latitude = latitude,
-    longitude = longitude
-  )
+  latlon <- assume_latlon(data = data,
+                          latitude = latitude,
+                          longitude = longitude)
   latitude <- latlon$latitude
   longitude <- latlon$longitude
 
-  # deal with limits
-  theLimits <- limits
-  if (is.null(limits)) {
+  # auto limits
+  limits <- check_multipoll(limits, pollutant)
+
+  if ("fixed" %in% limits) {
+    data <-
+      dplyr::mutate(data, latlng = paste(.data[[latitude]], .data[[longitude]]))
+
+    type <- facet
+    if (is.null(facet)) {
+      type <- "default"
+    }
+
+    testplots <-
+      openair::polarAnnulus(
+        data,
+        pollutant = pollutant,
+        period = period,
+        type = c("latlng", type),
+        plot = FALSE,
+        ...
+      )$data
+
+    theLimits <- range(testplots$z, na.rm = TRUE)
+  } else if ("free" %in% limits) {
     theLimits <- NA
+  } else if (is.numeric(limits)) {
+    theLimits <- limits
+  } else {
+    cli::cli_abort(
+      c("!" = "Do not recognise {.field limits} value of {.code {limits}}",
+        "i" = "{.field limits} should be one of {.code 'fixed'}, {.code 'free'} or a numeric vector of length 2.")
+    )
   }
 
   # cut data
@@ -257,7 +325,7 @@ annulusMapStatic <- function(data,
 
   # define function
   fun <- function(data) {
-    if (!is.null(limits)) {
+    if (!"free" %in% limits) {
       openair::polarAnnulus(
         data,
         pollutant = "conc",
@@ -296,16 +364,6 @@ annulusMapStatic <- function(data,
       d.fig = d.fig
     )
 
-  # load ggmap if not provided
-  ggmap <-
-    estimate_ggmap(
-      ggmap = ggmap,
-      data = plots_df,
-      latitude = latitude,
-      longitude = longitude,
-      zoom = zoom
-    )
-
   # create static map - deals with basics & facets
   plt <-
     create_static_map(
@@ -321,18 +379,14 @@ annulusMapStatic <- function(data,
     )
 
   # create colorbar if limits specified
-  if (!is.null(limits)) {
+  if (!all(is.na(theLimits))) {
     plt <-
       plt +
-      ggplot2::geom_point(
-        data = plots_df,
-        ggplot2::aes(.data[[longitude]], .data[[latitude]], color = 0),
-        alpha = 0
-      ) +
-      ggplot2::scale_color_gradientn(
-        limits = theLimits,
-        colours = openair::openColours(scheme = cols)
-      ) +
+      ggplot2::geom_point(data = plots_df,
+                          ggplot2::aes(.data[[longitude]], .data[[latitude]], color = 0),
+                          alpha = 0) +
+      ggplot2::scale_color_gradientn(limits = theLimits,
+                                     colours = openair::openColours(scheme = cols)) +
       ggplot2::labs(color = openair::quickText(paste(pollutant, collapse = ", ")))
   }
 

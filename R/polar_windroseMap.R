@@ -55,8 +55,10 @@ windroseMap <- function(data,
     lifecycle::deprecate_soft(
       when = "0.5.0",
       what = "openairmaps::windroseMap(type)",
-      details = c("Different sites are now automatically detected based on latitude and longitude",
-                  "Please use the `popup` argument to create popups.")
+      details = c(
+        "Different sites are now automatically detected based on latitude and longitude",
+        "Please use the `popup` argument to create popups."
+      )
     )
   }
 
@@ -201,13 +203,12 @@ windroseMap <- function(data,
 #' @return a `ggplot2` plot with a `ggmap` basemap
 #' @export
 windroseMapStatic <- function(data,
+                              ggmap = NULL,
                               ws.int = 2,
                               breaks = 4,
                               facet = NULL,
                               latitude = NULL,
                               longitude = NULL,
-                              zoom = 13,
-                              ggmap = NULL,
                               cols = "turbo",
                               alpha = 1,
                               key = FALSE,
@@ -215,6 +216,9 @@ windroseMapStatic <- function(data,
                               d.icon = 150,
                               d.fig = 3,
                               ...) {
+  # check that there is a ggmap
+  check_ggmap(missing(ggmap))
+
   # assume lat/lon
   latlon <- assume_latlon(
     data = data,
@@ -288,16 +292,6 @@ windroseMapStatic <- function(data,
       d.fig = d.fig
     )
 
-  # load ggmap if not provided
-  ggmap <-
-    estimate_ggmap(
-      ggmap = ggmap,
-      data = plots_df,
-      latitude = latitude,
-      longitude = longitude,
-      zoom = zoom
-    )
-
   # create static map - deals with basics & facets
   plt <-
     create_static_map(
@@ -323,7 +317,7 @@ windroseMapStatic <- function(data,
     ggplot2::geom_point(
       data = plots_df,
       ggplot2::aes(.data[[longitude]], .data[[latitude]],
-                   fill = intervals[1]
+        fill = intervals[1]
       ),
       size = 0,
       key_glyph = ggplot2::draw_key_rect

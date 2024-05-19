@@ -21,30 +21,96 @@
 #' "aurn")` and the "AURN" layer control group when `source = c("aurn",
 #' "saqn")`.
 #'
-#' @inheritParams openair::importMeta
+#' @param source *One or more UK or European monitoring networks.*
 #'
-#' @param control Option to add a "layer control" menu to allow readers to
-#'   select between different site types. Can choose between effectively any
-#'   column in the [openair::importMeta()] output, such as `"variable"`,
-#'   `"site_type"`, or `"agglomeration"`, as well as `"network"` when more than
-#'   one `source` was specified.
-#' @param year By default, [networkMap()] visualises sites which are currently
+#'    *default:* `"aurn"`
+#'
+#'   One or more air quality networks for which data is available through
+#'   openair. Available networks include:
+#'    - `"aurn"`, The UK Automatic Urban and Rural Network.
+#'    - `"aqe"`, The Air Quality England Network.
+#'    - `"saqn"`, The Scottish Air Quality Network.
+#'    - `"waqn"`, The Welsh Air Quality Network.
+#'    - `"ni"`, The Northern Ireland Air Quality Network.
+#'    - `"local"`, Locally managed air quality networks in England.
+#'    - `"kcl"`, King's College London networks.
+#'    - `"europe"`, European AirBase/e-reporting data.
+#'
+#'   There are two additional options provided for convenience:
+#'    - `"ukaq"` will return metadata for all networks for which data is imported by importUKAQ() (i.e., AURN, AQE, SAQN, WAQN, NI, and the local networks).
+#'    - `"all"` will import all available metadata (i.e., "ukaq" plus "kcl" and "europe").
+#'
+#' @param control *Option to create a 'layer control' menu.*
+#'
+#'  *default*: `NULL`
+#'
+#'   A string to specify categories in a "layer control" menu, to allow readers
+#'   to select between different site categories. Choices include:
+#'   - `"variable"` to toggle between different pollutants
+#'   - `"site_type"` for different site classifications
+#'   - `"agglomeration"`, `"zone"` or `"local_authority"` for different regions of the UK
+#'   - `"network"` for different monitoring networks, if more than one `source` is provided.
+#'
+#' @param year *A year, or range of years, with which to filter data.*
+#'
+#'  *default*: `NULL`
+#'
+#'   By default, [networkMap()] visualises sites which are currently
 #'   operational. `year` allows users to show sites open in a specific year, or
 #'   over a range of years. See [openair::importMeta()] for more information.
-#' @param cluster When `cluster = TRUE`, markers are clustered together. This
-#'   may be useful for sources like "kcl" where there are many markers very
-#'   close together. Defaults to `TRUE`, and is forced to be `TRUE` when `source
-#'   = "europe"` due to the large number of sites.
-#' @param provider The base map(s) to be used. See
+#'
+#' @param cluster *Cluster markers together when zoomed out?*
+#'
+#'  *default:* `TRUE`
+#'
+#'   When `cluster = TRUE`, markers are clustered together. This may be useful
+#'   for sources like "kcl" where there are many markers very close together.
+#'   Defaults to `TRUE`, and is forced to be `TRUE` when `source = "europe"` due
+#'   to the large number of sites.
+#'
+#' @param provider *The basemap(s) to be used.*
+#'
+#'  *default:* `c("Default" = "OpenStreetMap", "Satellite" = "Esri.WorldImagery")`
+#'
+#'   Any number of [leaflet::providers]. See
 #'   <http://leaflet-extras.github.io/leaflet-providers/preview/> for a list of
 #'   all base maps that can be used. If multiple base maps are provided, they
-#'   can be toggled between using a "layer control" interface.
-#' @param draw.legend When multiple `source`s are specified, should a legend be
-#'   created at the side of the map? Default is `TRUE`.
-#' @param collapse.control Should the "layer control" interface be collapsed?
-#'   Defaults to `FALSE`.
+#'   can be toggled between using a "layer control" interface. By default, the
+#'   interface will use the provider names as labels, but users can define their
+#'   own using a named vector (e.g., `c("Default" = "OpenStreetMap", "Satellite"
+#'   = "Esri.WorldImagery")`)
 #'
-#' @return A leaflet object.
+#' @param legend *Draw a shared legend?*
+#'
+#'  *default:* `TRUE`
+#'
+#'   When multiple `source`s are defined, should a shared legend be created at
+#'   the side of the map?
+#'
+#' @param legend.position *Position of the legend*
+#'
+#'  *default:* `"topright"`
+#'
+#'   Where should the shared legend be placed? One of "topleft", "topright",
+#'   "bottomleft" or "bottomright". Passed to the `position` argument of
+#'   [leaflet::addLayersControl()].
+#'
+#' @param control.collapsed *Show the layer control as a collapsed?*
+#'
+#'  *default:* `FALSE`
+#'
+#'   Should the "layer control" interface be collapsed? If `TRUE`, users will
+#'   have to hover over an icon to view the options.
+#'
+#' @param control.position *Position of the layer control menu*
+#'
+#'  *default:* `"topright"`
+#'
+#'   Where should the "layer control" interface be placed? One of "topleft",
+#'   "topright", "bottomleft" or "bottomright". Passed to the `position`
+#'   argument of [leaflet::addLayersControl()].
+#'
+#' @returns A leaflet object.
 #' @export
 #' @family uk air quality network mapping functions
 #'
@@ -68,8 +134,10 @@ networkMap <-
              "Default" = "OpenStreetMap",
              "Satellite" = "Esri.WorldImagery"
            ),
-           draw.legend = TRUE,
-           collapse.control = FALSE) {
+           legend = TRUE,
+           legend.position = "topright",
+           control.collapsed = FALSE,
+           control.position = "topright") {
     # if year isn't provided, use current year
     if (is.null(year)) {
       year <- lubridate::year(Sys.Date())
@@ -98,9 +166,19 @@ networkMap <-
           "lightgray",
           "black",
           "pink"
+        ),
+        realcolour = c(
+          "#d33d29",
+          "#f49630",
+          "#36a5d7",
+          "#70ad25",
+          "#cf51b6",
+          "#a3a3a3",
+          "#303030",
+          "#ff8ee9"
         )
       ) %>%
-      dplyr::mutate(colour2 = ifelse(.data$colour == "white", "gray", "white"))
+      dplyr::mutate(colour2 = ifelse(.data$colour == "#FFFFFF", "#303030", "#FFFFFF"))
 
     # read in data
     meta <-
@@ -167,6 +245,7 @@ networkMap <-
 
     # sort out control
     if (!is.null(control)) {
+      control.position <- check_legendposition(control.position, static = FALSE)
       if (!control %in% names(meta)) {
         trycols <- names(meta)[!names(meta) %in%
           c(
@@ -236,9 +315,10 @@ networkMap <-
             label = dat[["site"]],
             clusterOptions = clusteropts,
             icon = leaflet::makeAwesomeIcon(
+              library = "fa",
+              icon = "info-circle",
               markerColor = dat$colour,
-              iconColor = dat$colour2,
-              icon = "info-sign"
+              iconColor = dat$colour2
             )
           )
       }
@@ -248,8 +328,9 @@ networkMap <-
           map <-
             leaflet::addLayersControl(
               map,
-              options = leaflet::layersControlOptions(collapsed = collapse.control, autoZIndex = FALSE),
-              baseGroups = quickTextHTML(sort(control_vars)),
+              position = control.position,
+              options = leaflet::layersControlOptions(collapsed = control.collapsed, autoZIndex = FALSE),
+              baseGroups = sort(quickTextHTML(control_vars)),
               overlayGroups = names(provider)
             ) %>%
             leaflet::hideGroup(group = names(provider)[[-1]])
@@ -257,7 +338,8 @@ networkMap <-
           map <-
             leaflet::addLayersControl(
               map,
-              options = leaflet::layersControlOptions(collapsed = collapse.control, autoZIndex = FALSE),
+              position = control.position,
+              options = leaflet::layersControlOptions(collapsed = control.collapsed, autoZIndex = FALSE),
               baseGroups = quickTextHTML(sort(control_vars))
             )
         }
@@ -266,7 +348,8 @@ networkMap <-
           map <-
             leaflet::addLayersControl(
               map,
-              options = leaflet::layersControlOptions(collapsed = collapse.control, autoZIndex = FALSE),
+              position = control.position,
+              options = leaflet::layersControlOptions(collapsed = control.collapsed, autoZIndex = FALSE),
               overlayGroups = quickTextHTML(sort(control_vars)),
               baseGroups = names(provider)
             ) %>%
@@ -275,7 +358,8 @@ networkMap <-
           map <-
             leaflet::addLayersControl(
               map,
-              options = leaflet::layersControlOptions(collapsed = collapse.control, autoZIndex = FALSE),
+              position = control.position,
+              options = leaflet::layersControlOptions(collapsed = control.collapsed, autoZIndex = FALSE),
               overlayGroups = quickTextHTML(sort(control_vars))
             )
         }
@@ -295,9 +379,10 @@ networkMap <-
           label = dat[["site"]],
           clusterOptions = clusteropts,
           icon = leaflet::makeAwesomeIcon(
+            library = "fa",
+            icon = "info-circle",
             markerColor = dat$colour,
-            iconColor = dat$colour2,
-            icon = "info-sign"
+            iconColor = dat$colour2
           )
         )
 
@@ -305,7 +390,8 @@ networkMap <-
         map <-
           leaflet::addLayersControl(
             map,
-            options = leaflet::layersControlOptions(collapsed = collapse.control, autoZIndex = FALSE),
+            position = control.position,
+            options = leaflet::layersControlOptions(collapsed = control.collapsed, autoZIndex = FALSE),
             baseGroups = names(provider)
           ) %>%
           leaflet::hideGroup(group = names(provider)[[-1]])
@@ -313,13 +399,15 @@ networkMap <-
     }
 
     # multiple sources - add legend
-    if (length(source) > 1 & draw.legend) {
+    if (length(source) > 1 & legend) {
       map <-
         leaflet::addLegend(
           map,
+          opacity = 1,
+          position = check_legendposition(legend.position, static = FALSE),
           title = "Network",
-          colors = cols$colour,
-          labels = cols$network
+          colors = cols$realcolour,
+          labels = paste0("<span style='line-height:1.6'>", cols$network, "</span>")
         )
     }
 
@@ -389,7 +477,8 @@ prepNetworkData <- function(source, year) {
       "135TMB",
       "c2PENTEN",
       "MEPENT",
-      "3MEPENT"
+      "3MEPENT",
+      "NAPHTH"
     )
 
     meta <- dplyr::filter(

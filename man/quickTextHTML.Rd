@@ -2,15 +2,21 @@
 % Please edit documentation in R/utilities.R
 \name{quickTextHTML}
 \alias{quickTextHTML}
-\title{Automatic text formatting for openairmaps}
+\title{Automatic text formatting for \code{openairmaps}}
 \usage{
 quickTextHTML(text)
 }
 \arguments{
-\item{text}{A character vector.}
+\item{text}{\emph{A character vector.}
+
+\strong{required}
+
+A character vector containing common pollutant names to be formatted.
+Commonly, this will insert super- and subscript HTML tags, e.g., "NO2" will
+be replaced with "NO\if{html}{\out{<sub>}}2\if{html}{\out{</sub>}}".}
 }
 \value{
-The function returns a character vector for HTML evaluation.
+a character vector
 }
 \description{
 Workhorse function that automatically applies routine text formatting to
@@ -28,10 +34,8 @@ quickTextHTML(labs)
 
 }
 \seealso{
-The original \code{\link[openair:quickText]{openair::quickText()}}, useful for non-HTML/static maps
-and plots
+\code{\link[openair:quickText]{openair::quickText()}}, useful for non-HTML/static maps and plots
 }
 \author{
 Jack Davison.
 }
-\keyword{methods}

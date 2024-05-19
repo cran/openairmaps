@@ -10,24 +10,60 @@
 #' first `source` and `year`, then `site_type` and `variable`, then `max_dist`,
 #' and finally `n`.
 #'
-#' @inheritParams openair::importMeta
+#' @inheritParams networkMap
+#' @inheritParams polarMap
 #'
-#' @param lat,lng The latitude and longitude for the location of interest.
-#' @param site_type Optional. One or more site types with which to subset the
-#'   site metadata. For example, `site_type = "urban background"` will only
-#'   search urban background sites.
-#' @param variable Optional. One or more variables of interest with which to
-#'   subset the site metadata. For example, `variable = c("pm10", "co")` will
-#'   search sites that measure PM10 and/or CO.
-#' @param max_dist Optional. A maximum distance from the location of interest in
-#'   kilometres.
-#' @param n Optional. The maximum number of sites to return.
-#' @param map If `TRUE`, the default, [searchNetwork()] will return a `leaflet`
-#'   map. If `FALSE`, it will instead return a [tibble][tibble::tibble-package].
+#' @param lat,lng *The decimal latitude(Y)/longitude(X).*
+#'
+#'  **required**
+#'
+#'   Values representing the decimal latitude and longitude (or other Y/X
+#'   coordinate if using a different `crs`) of the site of interest.
+#'
+#' @param site_type *One or more site types with which to subset the site
+#'   metadata.*
+#'
+#'  *default:* `NULL`
+#'
+#'   If `site_type` is specified, only sites of that type will be searched for.
+#'   For example, `site_type = "urban background"` will only search urban
+#'   background sites.
+#'
+#' @param variable *One or more variables of interest with which to subset the
+#'   site metadata.*
+#'
+#'   *default:* `NULL`
+#'
+#'   If `variable` is specified, only sites measuring at least one of these
+#'   pollutants will be searched for. For example, `variable = c("pm10", "co")`
+#'   will search sites that measure PM10 and/or CO.
+#'
+#' @param max_dist *A maximum distance from the location of interest in
+#'   kilometres.*
+#'
+#'   *default:* `NULL`
+#'
+#'   If `max_dist` is specified, only sites within `max_dist` kilometres from
+#'   the `lat` / `lng` coordinate will be searched for.
+#'
+#' @param n *The maximum number of sites to return.*
+#'
+#'    *default:* `NULL`
+#'
+#'   If `n` is specified, only `n` sites will be returned. Note that this
+#'   filtering step is applied last, after `site_type`, `variable`, and
+#'   `max_dist`.
+#'
+#' @param map *Return a map?*
+#'
+#'    *default:* `TRUE`
+#'
+#'   If `TRUE`, the default, [searchNetwork()] will return a `leaflet` map. If
+#'   `FALSE`, it will instead return a [tibble][tibble::tibble-package].
 #'
 #' @order 2
 #'
-#' @return Either a [tibble][tibble::tibble-package] or `leaflet` map.
+#' @returns Either a [tibble][tibble::tibble-package] or `leaflet` map.
 #' @export
 #' @family uk air quality network mapping functions
 #'
@@ -46,6 +82,7 @@ searchNetwork <-
            variable = NULL,
            max_dist = NULL,
            n = NULL,
+           crs = 4326,
            map = TRUE) {
     # swap NULL to NA - to pass to openair
     if (is.null(year)) {
@@ -68,8 +105,9 @@ searchNetwork <-
       dplyr::tibble(latitude = lat, longitude = lng) %>%
       sf::st_as_sf(
         coords = c("longitude", "latitude"),
-        crs = 4326
-      )
+        crs = crs
+      ) %>%
+      sf::st_transform(crs = 4326)
 
     # filter for site_type
     if (!is.null(site_type)) {
@@ -191,7 +229,7 @@ searchNetwork <-
       leaflet::addMarkers(
         data = target,
         label = "Target",
-        popup = stringr::str_glue("<b><u>TARGET</u></b><br> <b>Latitude:</b> {lat}<br> <b>Longitude:</b> {lng}")
+        popup = stringr::str_glue("<b><u>TARGET</u></b><br> <b>Latitude:</b> {sf::st_coordinates(target$geometry)[1,'Y']}<br> <b>Longitude:</b> {sf::st_coordinates(target$geometry)[1,'X']}")
       ) %>%
       leaflet::addControl(
         position = "bottomright",

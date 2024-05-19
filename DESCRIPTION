@@ -1,7 +1,7 @@
 Type: Package
 Package: openairmaps
 Title: Create Maps of Air Pollution Data
-Version: 0.8.1
+Version: 0.9.0
 Authors@R: c(
     person("Jack", "Davison", , "jack.davison@ricardo.com", role = c("cre", "aut")),
     person("David", "Carslaw", , "david.carslaw@york.ac.uk", role = "aut")
@@ -15,18 +15,19 @@ URL: https://davidcarslaw.github.io/openairmaps/,
         https://github.com/davidcarslaw/openairmaps
 BugReports: https://github.com/davidcarslaw/openairmaps/issues
 Depends: R (>= 3.2.0)
-Imports: cli, dplyr, forcats, ggmap, ggplot2, ggtext, leaflet,
-        lifecycle, lubridate, magrittr, mgcv, openair (>= 2.13), purrr
-        (>= 1.0.0), rlang, sf, stringr, tibble, tidyr
-Suggests: httr, jsonlite, worldmet
+Imports: cli, dplyr, forcats, ggplot2, ggspatial, ggtext, leaflet (>=
+        2.2.0), lifecycle, lubridate, magrittr, mgcv, openair (>=
+        2.13), prettymapr, purrr (>= 1.0.0), rlang, rosm, sf, stringr,
+        tibble, tidyr
+Suggests: httr, jsonlite, shiny, worldmet
 Encoding: UTF-8
 Language: en-GB
 LazyData: true
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 NeedsCompilation: no
-Packaged: 2023-11-03 09:18:23 UTC; JD38
+Packaged: 2024-05-19 15:48:16 UTC; Jack
 Author: Jack Davison [cre, aut],
   David Carslaw [aut]
 Maintainer: Jack Davison <jack.davison@ricardo.com>
 Repository: CRAN
-Date/Publication: 2023-11-03 10:30:02 UTC
+Date/Publication: 2024-05-19 16:00:02 UTC

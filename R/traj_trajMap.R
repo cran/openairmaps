@@ -8,58 +8,145 @@
 #'
 #' @family interactive trajectory maps
 #'
-#' @param data Data frame, the result of importing a trajectory file using
-#'   [openair::importTraj()].
-#' @param latitude,longitude The decimal latitude/longitude.
-#' @param colour Column to be used for colouring each trajectory. This column
-#'   may be numeric, character or factor. This will commonly be a pollutant
-#'   concentration which has been joined (e.g., by [dplyr::left_join()]) to the
-#'   trajectory data by "date".
-#' @param control Used for splitting the trajectories into different groups
-#'   which can be selected between using a "layer control" menu. Passed to
+#' @param data *A data frame containing a HYSPLIT trajectory, perhaps accessed
+#'   with [openair::importTraj()].*
+#'
+#'   **required**
+#'
+#'   A data frame containing HYSPLIT model outputs. If this data were not
+#'   obtained using [openair::importTraj()].
+#'
+#' @param latitude,longitude *The decimal latitude/longitude.*
+#'
+#'  *default:* `"lat"` / `"lon"`
+#'
+#'   Column names representing the decimal latitude and longitude.
+#'
+#' @param colour *Column to be used for colouring each trajectory.*
+#'
+#'  *default:* `NULL`
+#'
+#'   This column may be numeric, character, factor or date(time). This will
+#'   commonly be a pollutant concentration which has been joined (e.g., by
+#'   [dplyr::left_join()]) to the trajectory data by "date".
+#'
+#' @param type *A method to condition the `data` for separate plotting.*
+#'
+#'  *default:* `NULL`
+#'
+#'   Used for splitting the trajectories into different groups which can be
+#'   selected between using a "layer control" menu. Passed to
 #'   [openair::cutData()].
-#' @param cols Colours to be used for plotting. Options include "default",
-#'   "increment", "heat", "turbo" and `RColorBrewer` colours — see the
-#'   [openair::openColours()] function for more details. For user defined the
-#'   user can supply a list of colour names recognised by R (type
-#'   [grDevices::colours()] to see the full list). An example would be `cols =
-#'   c("yellow", "green", "blue")`. If the `"colour"` argument was not used, a
-#'   single colour can be named which will be used consistently for all
-#'   lines/points (e.g., `cols = "red"`).
-#' @param alpha Opacity of lines/points. Must be between `0` and `1`.
-#' @param npoints A dot is placed every `npoints` along each full trajectory.
-#'   For hourly back trajectories points are plotted every `npoints` hours. This
-#'   helps to understand where the air masses were at particular times and get a
-#'   feel for the speed of the air (points closer together correspond to slower
-#'   moving air masses). Defaults to `12`.
-#' @param provider The base map to be used. See
+#'
+#' @param cols *Colours to use for plotting.*
+#'
+#'  *default:* `"default"`
+#'
+#'   The colours used for plotting, passed to [openair::openColours()].
+#'
+#' @param alpha *Transparency value for trajectories.*
+#'
+#'  *default:* `1`
+#'
+#'   A value between `0` (fully transparent) and `1` (fully opaque).
+#'
+#' @param npoints *Interval at which points are placed along the trajectory
+#'   paths.*
+#'
+#'  *default:* `12`
+#'
+#'   A dot is placed every `npoints` along each full trajectory. For hourly back
+#'   trajectories points are plotted every `npoints` hours. This helps to
+#'   understand where the air masses were at particular times and get a feel for
+#'   the speed of the air (points closer together correspond to slower moving
+#'   air masses). Defaults to `12`.
+#'
+#' @param provider *The basemap to be used.*
+#'
+#'  *default:* `"OpenStreetMap"`
+#'
+#'   A single [leaflet::providers]. See
 #'   <http://leaflet-extras.github.io/leaflet-providers/preview/> for a list of
 #'   all base maps that can be used.
-#' @param collapse.control Should the "layer control" interface be collapsed?
-#'   Defaults to `FALSE`.
 #'
-#' @return A leaflet object.
+#' @param legend.position *Position of the shared legend.*
+#'
+#'  *default:* `"topright"`
+#'
+#'   Where should the legend be placed? One of "topright", "topright",
+#'   "bottomleft" or "bottomright". Passed to the `position` argument of
+#'   [leaflet::addLegend()]. `NULL` defaults to "topright".
+#'
+#' @param legend.title *Title of the legend.*
+#'
+#'   *default:* `NULL`
+#'
+#'   By default, when `legend.title = NULL`, the function will attempt to
+#'   provide a sensible legend title based on `colour`. `legend.title` allows
+#'   users to overwrite this - for example, to include units or other contextual
+#'   information. Users may wish to use HTML tags to format the title.
+#'
+#' @param legend.title.autotext *Automatically format the title of the legend?*
+#'
+#'   *default:* `TRUE`
+#'
+#'   When `legend.title.autotext = TRUE`, `legend.title` will be first run
+#'   through [quickTextHTML()].
+#'
+#' @param control.collapsed *Show the layer control as a collapsed?*
+#'
+#'  *default:* `FALSE`
+#'
+#'   Should the "layer control" interface be collapsed? If `TRUE`, users will
+#'   have to hover over an icon to view the options.
+#'
+#' @param control.position *Position of the layer control menu*
+#'
+#'  *default:* `"topright"`
+#'
+#'   Where should the "layer control" interface be placed? One of "topleft",
+#'   "topright", "bottomleft" or "bottomright". Passed to the `position`
+#'   argument of [leaflet::addLayersControl()].
+#'
+#' @param control Deprecated. Please use `type`.
+#'
+#' @returns A leaflet object.
 #' @export
 #'
-#' @seealso the original [openair::trajPlot()]
+#' @seealso [openair::trajPlot()]
 #' @seealso [trajMapStatic()] for the static `ggplot2` equivalent of [trajMap()]
 #'
 #' @examples
 #' \dontrun{
-#' trajMap(traj_data, colour = "nox")
+#' trajMap(traj_data, colour = "pm10")
 #' }
 #'
 trajMap <-
   function(data,
            longitude = "lon",
            latitude = "lat",
-           colour,
-           control = "default",
+           colour = NULL,
+           type = NULL,
            cols = "default",
            alpha = .5,
            npoints = 12,
            provider = "OpenStreetMap",
-           collapse.control = FALSE) {
+           legend.position = "topright",
+           legend.title = NULL,
+           legend.title.autotext = TRUE,
+           control.collapsed = FALSE,
+           control.position = "topright",
+           control = NULL) {
+    # handle deprecated argument
+    if (!is.null(control)) {
+      lifecycle::deprecate_soft(
+        when = "0.9.0",
+        what = "trajMap(control)",
+        with = "trajMap(type)"
+      )
+    }
+    type <- type %||% control
+
     # make lat/lon easier to use
     names(data)[names(data) == longitude] <- "lon"
     names(data)[names(data) == latitude] <- "lat"
@@ -70,19 +157,21 @@ trajMap <-
     # get factor version of date to reorder by "colour"
     data$datef <- factor(data$date)
 
-    # if no "control", get a fake column
-    data <- openair::cutData(data, control)
+    # if no "type", get a fake column
+    data <- quick_cutdata(data, type)
+    type <- type %||% "default"
 
     # initialise map
     map <- leaflet::leaflet() %>%
       leaflet::addProviderTiles(provider = provider)
 
     # if "colour", create colour palette
-    if (!missing(colour)) {
+    if (!is.null(colour)) {
       if (colour %in% names(data)) {
         data <- dplyr::arrange(data, .data$datef)
 
-        if ("factor" %in% class(data[[colour]]) | "character" %in% class(data[[colour]])) {
+        if ("factor" %in% class(data[[colour]]) |
+          "character" %in% class(data[[colour]])) {
           pal <- leaflet::colorFactor(
             palette = openair::openColours(scheme = cols, n = length(unique(data[[colour]]))),
             domain = data[[colour]]
@@ -106,37 +195,42 @@ trajMap <-
     # make labels
     data <- dplyr::mutate(
       data,
-      lab = stringr::str_glue("<b>Arrival Date:</b> {date}<br>
+      lab = stringr::str_glue(
+        "<b>Arrival Date:</b> {date}<br>
                              <b>Trajectory Date:</b> {date2}<br>
                              <b>Lat:</b> {lat} | <b>Lon:</b> {lon}<br>
-                             <b>Height:</b> {height} m | <b>Pressure:</b> {pressure} Pa")
+                             <b>Height:</b> {height} m | <b>Pressure:</b> {pressure} Pa"
+      )
     )
 
-    if (!missing(colour)) {
-      if (colour %in% names(data) & !colour %in% c("date", "date2", "lat", "lon", "height", "pressure")) {
-        data$lab <- paste(
-          data$lab,
+    if (!is.null(colour)) {
+      if (colour %in% names(data) &
+        !colour %in% c("date", "date2", "lat", "lon", "height", "pressure")) {
+        data$lab <- paste(data$lab,
           paste0("<b>", quickTextHTML(colour), ":</b> ", data[[colour]]),
           sep = "<br>"
         )
       }
     }
 
-    # iterate over columns in "control" column
-    for (j in seq(length(unique(data[[control]])))) {
-      # get jth instance of "control"
-      data2 <- dplyr::filter(data, .data[[control]] == unique(data[[control]])[[j]])
+    # iterate over columns in "type" column
+    for (j in seq(length(unique(data[[type]])))) {
+      # get jth instance of "type"
+      data2 <-
+        dplyr::filter(data, .data[[type]] == unique(data[[type]])[[j]])
 
       # iterate over different arrival dates to plot separate trajectories
       for (i in seq(length(unique(data2$datef)))) {
         # get line/points data
-        ldata <- dplyr::filter(data2, .data$datef == unique(data2$datef)[[i]])
-        pdata <- dplyr::filter(ldata, .data$hour.inc %% npoints == 0)
+        ldata <-
+          dplyr::filter(data2, .data$datef == unique(data2$datef)[[i]])
+        pdata <-
+          dplyr::filter(ldata, .data$hour.inc %% npoints == 0)
 
         lcolors <- fixedcol
         pcolors <- fixedcol
         # apply color pal if it exists
-        if (!missing(colour)) {
+        if (!is.null(colour)) {
           if (colour %in% names(data)) {
             lcolors <- pal(ldata[[colour]])[1]
             pcolors <- pal(pdata[[colour]])
@@ -153,38 +247,50 @@ trajMap <-
             opacity = alpha,
             weight = 2,
             color = lcolors,
-            group = as.character(unique(data[[control]])[[j]])
+            group = as.character(unique(data[[type]])[[j]])
           ) %>%
           leaflet::addCircleMarkers(
             data = pdata,
-            radius = 3, stroke = F,
+            radius = 3,
+            stroke = F,
             lng = pdata$lon,
             lat = pdata$lat,
             fillOpacity = alpha,
             color = pcolors,
-            group = as.character(unique(data[[control]])[[j]]),
+            group = as.character(unique(data[[type]])[[j]]),
             popup = pdata$lab
           )
       }
     }
 
     # if "group" exists, add a legend
-    if (!missing(colour)) {
+    if (!is.null(colour)) {
+      legend.title <- legend.title %||% colour
+      if (legend.title.autotext) {
+        legend.title <- quickTextHTML(legend.title)
+      }
+
       if (colour %in% names(data)) {
         if ("POSIXct" %in% class(data[[colour]])) {
           map <-
-            leaflet::addLegend(map,
-              title = quickTextHTML(colour),
+            leaflet::addLegend(
+              map,
+              title = legend.title,
+              position = check_legendposition(legend.position, FALSE),
               pal = pal,
               values = as.numeric(data[[colour]], origin = "1964-10-22"),
               labFormat = leaflet::labelFormat(
-                transform = function(x) as.Date.POSIXct(x, origin = "1964-10-22")
+                transform = function(x) {
+                  as.Date.POSIXct(x, origin = "1964-10-22")
+                }
               )
             )
         } else {
           map <-
-            leaflet::addLegend(map,
-              title = quickTextHTML(colour),
+            leaflet::addLegend(
+              map,
+              title = legend.title,
+              position = check_legendposition(legend.position, FALSE),
               pal = pal,
               values = data[[colour]]
             )
@@ -193,12 +299,13 @@ trajMap <-
     }
 
     # if "control" exists, add the layer control menu
-    if (control != "default") {
+    if (type != "default") {
       map <-
         leaflet::addLayersControl(
           map,
-          options = leaflet::layersControlOptions(collapsed = collapse.control),
-          overlayGroups = as.character(unique(data[[control]]))
+          position = control.position,
+          options = leaflet::layersControlOptions(collapsed = control.collapsed, autoZIndex = FALSE),
+          overlayGroups = as.character(unique(data[[type]]))
         )
     }
 
@@ -217,37 +324,94 @@ trajMap <-
 #' @family static trajectory maps
 #'
 #' @inheritParams trajMap
-#' @param facet Used for splitting the trajectories into different panels.
-#'   Passed to [openair::cutData()].
-#' @param group By default, trajectory paths are distinguished using the arrival
-#'   date. `group` allows for additional columns to be used (e.g.,
-#'   `"receptor"`).
-#' @param xlim,ylim The x- and y-limits of the plot. If `NULL`, limits will be
-#'   estimated based on the lat/lon ranges of the input data.
-#' @param crs The coordinate reference system (CRS) into which all data should
-#'   be projected before plotting. Defaults to the Lambert projection
-#'   (`sf::st_crs(3812)`). Alternatively, can be set to `NULL`, which will
-#'   typically render the map quicker but may cause countries far from the
+#'
+#' @param type *A method to condition the `data` for separate plotting.*
+#'
+#'  *default:* `NULL`
+#'
+#'   Used for splitting the trajectories into different groups which will appear
+#'   as different panels. Passed to [openair::cutData()].
+#'
+#' @param group *Column to use to distinguish different trajectory paths.*
+#'
+#'  *default:* `NULL`
+#'
+#'   By default, trajectory paths are distinguished using the arrival date.
+#'   `group` allows for additional columns to be used (e.g., `"receptor"` if
+#'   multiple receptors are being plotted).
+#'
+#' @param xlim,ylim *The x- and y-limits of the plot.*
+#'
+#'  *default:* `NULL`
+#'
+#'   A numeric vector of length two defining the x-/y-limits of the map, passed
+#'   to [ggplot2::coord_sf()]. If `NULL`, limits will be estimated based on the
+#'   lat/lon ranges of the input data.
+#'
+#' @param crs *The coordinate reference system (CRS) into which all data should
+#'   be projected before plotting.*
+#'
+#'   *default:* `sf::st_crs(3812)`
+#'
+#'   This argument defaults to the Lambert projection, but can take any
+#'   coordinate reference system to pass to the `crs` argument of
+#'   [ggplot2::coord_sf()]. Alternatively, `crs` can be set to `NULL`, which
+#'   will typically render the map quicker but may cause countries far from the
 #'   equator or large areas to appear distorted.
-#' @param map Should a base map be drawn? Defaults to `TRUE`.
-#' @param map.fill Colour to use to fill the polygons of the base map (see
-#'   `colors()`).
-#' @param map.colour Colour to use for the polygon borders of the base map (see
-#'   `colors()`).
-#' @param map.alpha Transparency of the base map polygons. Must be between `0`
-#'   (fully transparent) and `1` (fully opaque).
-#' @param map.lwd Line width of the base map polygon borders.
-#' @param map.lty Line type of the base map polygon borders. See
-#'   [ggplot2::scale_linetype()] for common examples.
-#' @param origin Should the receptor point be marked with a circle? Defaults to
-#'   `TRUE`.
+#'
+#' @param map *Draw a base map?*
+#'
+#'  *default:* `TRUE`
+#'
+#'   Draws the geometries of countries under the trajectory paths.
+#'
+#' @param map.fill *Colour to use to fill the polygons of the base map.*
+#'
+#'  *default:* `"grey85"`
+#'
+#'   See `colors()` for colour options. Alternatively, a hexadecimal color code
+#'   can be provided.
+#'
+#' @param map.colour *Colour to use for the polygon borders of the base map.*
+#'
+#'  *default:* `"grey75"`
+#'
+#'   See `colors()` for colour options. Alternatively, a hexadecimal color code
+#'   can be provided.
+#'
+#' @param map.alpha *Transparency of the base map polygons.*
+#'
+#'  *default:* `0.8`
+#'
+#'   Must be between `0` (fully transparent) and `1` (fully opaque).
+#'
+#' @param map.lwd *Line width of the base map polygon borders.*
+#'
+#'  *default:* `0.5`
+#'
+#'   Any numeric value.
+#'
+#' @param map.lty *Line type of the base map polygon borders.*
+#'
+#'  *default:* `1`
+#'
+#'   See [ggplot2::scale_linetype()] for common examples. The default, `1`,
+#'   draws solid lines.
+#'
+#' @param origin *Draw the receptor point as a circle?*
+#'
+#'  *default:* `TRUE`
+#'
+#'  When `TRUE`, the receptor point(s) are marked with black circles.
+#'
+#' @param facet Deprecated. Please use `type`.
 #'
 #' @inheritDotParams ggplot2::coord_sf -xlim -ylim -crs -default_crs
 #'
-#' @return a `ggplot2` plot
+#' @returns a `ggplot2` plot
 #' @export
 #'
-#' @seealso the original [openair::trajPlot()]
+#' @seealso [openair::trajPlot()]
 #' @seealso [trajMap()] for the interactive `leaflet` equivalent of
 #'   [trajMapStatic()]
 #'
@@ -270,7 +434,7 @@ trajMap <-
 trajMapStatic <-
   function(data,
            colour = "height",
-           facet = NULL,
+           type = NULL,
            group = NULL,
            longitude = "lon",
            latitude = "lat",
@@ -285,7 +449,22 @@ trajMapStatic <-
            map.alpha = 0.8,
            map.lwd = 0.5,
            map.lty = 1,
+           facet = NULL,
            ...) {
+    # handle deprecated argument
+    if (!is.null(facet)) {
+      lifecycle::deprecate_soft(
+        when = "0.9.0",
+        what = "trajMapStatic(facet)",
+        with = "trajMapStatic(type)"
+      )
+    }
+    type <- type %||% facet
+
+    # cut data
+    data <- quick_cutdata(data, type)
+
+    # make plot
     plt <-
       ggplot2::ggplot(data, ggplot2::aes(x = .data[[longitude]], y = .data[[latitude]]))
 
@@ -305,12 +484,16 @@ trajMapStatic <-
     }
 
     if (is.null(xlim)) {
-      d_lon <- diff(range(c(min(data[[longitude]]), max(data[[longitude]])))) * 0.1
-      xlim <- c(min(data[[longitude]]) - d_lon, max(data[[longitude]]) + d_lon)
+      d_lon <-
+        diff(range(c(min(data[[longitude]]), max(data[[longitude]])))) * 0.1
+      xlim <-
+        c(min(data[[longitude]]) - d_lon, max(data[[longitude]]) + d_lon)
     }
     if (is.null(ylim)) {
-      d_lat <- diff(range(c(min(data[[latitude]]), max(data[[latitude]])))) * 0.1
-      ylim <- c(min(data[[latitude]]) - d_lat, max(data[[latitude]]) + d_lat)
+      d_lat <-
+        diff(range(c(min(data[[latitude]]), max(data[[latitude]])))) * 0.1
+      ylim <-
+        c(min(data[[latitude]]) - d_lat, max(data[[latitude]]) + d_lat)
     }
 
     points_df <- dplyr::filter(data, .data$hour.inc %% npoints == 0)
@@ -347,9 +530,9 @@ trajMapStatic <-
       theme_static() +
       coords
 
-    if (!is.null(facet)) {
+    if (!is.null(type)) {
       plt <-
-        plt + ggplot2::facet_wrap(ggplot2::vars(.data[[facet]]))
+        plt + ggplot2::facet_wrap(ggplot2::vars(.data[[type]]))
     }
 
     if (origin) {

@@ -298,12 +298,24 @@ make_leaflet_map <-
   function(data,
            latitude,
            longitude,
+           crs,
            provider,
            d.icon,
            popup,
            label,
            split_col,
-           collapse.control) {
+           control.collapsed,
+           control.position,
+           control.autotext) {
+    if (control.autotext) {
+      textfun <- quickTextHTML
+    } else {
+      textfun <- identity
+    }
+
+    data <- sf::st_as_sf(data, coords = c(longitude, latitude), crs = crs) %>%
+      sf::st_transform(crs = 4326)
+
     # create map
     map <- leaflet::leaflet(data)
 
@@ -330,16 +342,16 @@ make_leaflet_map <-
     # add markers
     marker_arg <- list(
       map = map,
-      lat = data[[latitude]],
-      lng = data[[longitude]],
       icon = leaflet::makeIcon(
         iconUrl = data$url,
         iconHeight = height,
         iconWidth = width,
         iconAnchorX = width / 2,
-        iconAnchorY = height / 2
+        iconAnchorY = height / 2,
+        popupAnchorX = -.Machine$double.eps,
+        popupAnchorY = -(height / 2) * 0.7
       ),
-      group = quickTextHTML(data[[split_col]])
+      group = textfun(data[[split_col]])
     )
 
     if (!is.null(popup)) {
@@ -355,24 +367,35 @@ make_leaflet_map <-
     flag_provider <- dplyr::n_distinct(provider) > 1
     flag_split <- dplyr::n_distinct(data[[split_col]]) > 1
     opts <-
-      leaflet::layersControlOptions(collapsed = collapse.control, autoZIndex = FALSE)
+      leaflet::layersControlOptions(collapsed = control.collapsed, autoZIndex = FALSE)
 
     if (flag_provider & flag_split) {
       map <-
         leaflet::addLayersControl(
           map,
-          baseGroups = quickTextHTML(unique(data[[split_col]])),
+          position = control.position,
+          baseGroups = textfun(unique(data[[split_col]])),
           overlayGroups = names(provider),
           options = opts
         ) %>%
         leaflet::hideGroup(group = names(provider)[-1])
     } else if (flag_provider & !flag_split) {
       map <-
-        leaflet::addLayersControl(map, baseGroups = names(provider), options = opts) %>%
+        leaflet::addLayersControl(
+          map,
+          position = control.position,
+          baseGroups = names(provider),
+          options = opts
+        ) %>%
         leaflet::hideGroup(group = names(provider)[-1])
     } else if (!flag_provider & flag_split) {
       map <-
-        leaflet::addLayersControl(map, baseGroups = quickTextHTML(unique(data[[split_col]])), options = opts)
+        leaflet::addLayersControl(
+          map,
+          position = control.position,
+          baseGroups = textfun(unique(data[[split_col]])),
+          options = opts
+        )
     }
 
     return(map)
@@ -389,7 +412,6 @@ theme_static <- function() {
 
 #' Create markers for the static plots
 #' @param fun function of "data" to create plot
-#' @param dir directory (created in function)
 #' @param latitude,longitude,split_col,d.fig inherited from parent
 #' @noRd
 create_polar_markers <-
@@ -447,7 +469,18 @@ create_polar_markers <-
       nested_df %>%
       dplyr::mutate(
         plot = purrr::map(data, fun, .progress = "Creating Polar Markers"),
-        url = paste0(dir, "/", .data[[latitude]], "_", .data[[longitude]], "_", .data[[split_col]], "_", id, ".png")
+        url = paste0(
+          dir,
+          "/",
+          .data[[latitude]],
+          "_",
+          .data[[longitude]],
+          "_",
+          rm_illegal_chars(.data[[split_col]]),
+          "_",
+          id,
+          ".png"
+        )
       )
 
     # work out w/h
@@ -459,7 +492,13 @@ create_polar_markers <-
       height <- d.fig[[2]]
     }
 
-    purrr::pwalk(list(plots_df[[latitude]], plots_df[[longitude]], plots_df[[split_col]], plots_df$plot),
+    purrr::pwalk(
+      list(
+        plots_df[[latitude]],
+        plots_df[[longitude]],
+        rm_illegal_chars(plots_df[[split_col]]),
+        plots_df$plot
+      ),
       .f = ~ {
         grDevices::png(
           filename = paste0(dir, "/", ..1, "_", ..2, "_", ..3, "_", id, ".png"),
@@ -481,46 +520,31 @@ create_polar_markers <-
   }
 
 #' if ggmap is not provided, have a guess
-#' @param data `plots_df` input
-#' @param ggmap,latitude,longitude,zoom inherited from parent
+#' @param data `plots_sf` input
 #' @noRd
-estimate_ggmap <-
-  function(ggmap = ggmap,
-           data,
-           latitude = latitude,
-           longitude = longitude,
-           zoom = zoom) {
-    if (is.null(ggmap)) {
-      lat_d <- abs(diff(range(data[[latitude]])) / 2)
-      lon_d <- abs(diff(range(data[[longitude]])) / 2)
-      d <- max(lon_d, lat_d)
-      if (d == 0) d <- 0.05
-
-      minlat <- min(data[[latitude]]) - d
-      maxlat <- max(data[[latitude]]) + d
-
-      minlon <- min(data[[longitude]]) - d
-      maxlon <- max(data[[longitude]]) + d
-
-      ggmap <-
-        ggmap::get_stamenmap(
-          bbox = c(minlon, minlat, maxlon, maxlat),
-          zoom = zoom
-        )
-    }
-
-    return(ggmap)
+estimate_bbox <-
+  function(data) {
+    bbox <- sf::st_bbox(data) %>% as.list()
+    xdiff <- abs(bbox$xmin - bbox$xmax) / 2
+    ydiff <- abs(bbox$ymin - bbox$ymax) / 2
+    diff <- mean(c(xdiff, ydiff))
+    bbox$xmin <- bbox$xmin - diff
+    bbox$xmax <- bbox$xmax + diff
+    bbox$ymin <- bbox$ymin - diff
+    bbox$ymax <- bbox$ymax + diff
+    return(bbox)
   }
 
 #' Create static map
-#' @param ggmap:facet.nrow inherited from parent
+#' @param latitude:facet.nrow inherited from parent
 #' @param plots_df `plots_df`
 #' @noRd
 create_static_map <-
-  function(ggmap,
-           plots_df,
+  function(plots_df,
            latitude,
            longitude,
+           crs,
+           provider,
            split_col,
            pollutant,
            d.icon,
@@ -536,27 +560,44 @@ create_static_map <-
       height <- d.icon[[2]]
     }
 
+    link_to_img <- function(x, width, height) {
+      stringr::str_glue("<img src='{x}' width='{width}' height='{height}'/>")
+    }
+
     # don't turn facet levels into chr, keep as fct
     if (length(pollutant) > 1 | !is.null(facet)) {
       levels(plots_df[[split_col]]) <- quickTextHTML(levels(plots_df[[split_col]]))
     }
 
+    plots_sf <-
+      sf::st_as_sf(
+        plots_df,
+        coords = c(longitude, latitude),
+        crs = crs,
+        remove = FALSE
+      ) %>%
+      sf::st_transform(crs = 4326)
+
+    # create link to image
+    plots_sf$link <- link_to_img(plots_sf$url, height, width)
+
+    # work out an approximate bounding box for the plot
+    bbox <- estimate_bbox(plots_sf)
+
     # make plot
     plt <-
-      ggmap::ggmap(ggmap) +
-      ggtext::geom_richtext(
-        data = dplyr::mutate(
-          plots_df,
-          url = stringr::str_glue("<img src='{url}' width='{width}' height='{height}'/>")
-        ),
-        ggplot2::aes(.data[[longitude]], .data[[latitude]], label = .data$url),
-        fill = NA,
-        color = NA
+      ggplot2::ggplot(plots_sf) +
+      ggspatial::annotation_map_tile(zoomin = 0, cachedir = tempdir(), type = provider, progress = "none") +
+      geom_sf_richtext(data = plots_sf, ggplot2::aes(label = .data[["link"]]), fill = NA, color = NA) +
+      theme_static() +
+      ggplot2::coord_sf(
+        xlim = c(bbox$xmin, bbox$xmax),
+        ylim = c(bbox$ymin, bbox$ymax)
       ) +
-      ggplot2::labs(x = NULL, y = NULL) +
-      theme_static()
+      ggplot2::labs(x = NULL, y = NULL)
 
-    if (length(pollutant) > 1 | !is.null(facet)) {
+    if (length(pollutant) > 1 |
+      !is.null(facet)) {
       plt <-
         plt + ggplot2::facet_wrap(ggplot2::vars(.data[[split_col]]), nrow = facet.nrow) +
         ggplot2::theme(strip.text = ggtext::element_markdown())
@@ -577,11 +618,10 @@ quick_popup <- function(data, popup, latitude, longitude, control) {
 
   buildPopup(
     data,
-    cols = popup,
+    columns = names,
     latitude = latitude,
     longitude = longitude,
-    names = names,
-    control = control
+    type = control
   )
 }
 
@@ -595,7 +635,7 @@ quick_cutdata <- function(data, type) {
 
 #' checks if multiple pollutants have been provided with a "fixed" scale
 #' @noRd
-check_multipoll <- function(vec, pollutant){
+check_multipoll <- function(vec, pollutant) {
   if ("fixed" %in% vec & length(pollutant) > 1) {
     cli::cli_warn("{.code 'fixed'} limits only work with a single given {.field pollutant}")
     "free"
@@ -604,14 +644,170 @@ check_multipoll <- function(vec, pollutant){
   }
 }
 
-#' check if ggmap has been provided
+#' a combination of geom_sf and geom_richtext
+#'
+#' @author StuieT85 on GitHub
+#' @source https://github.com/wilkelab/ggtext/issues/76#issuecomment-1011166509
 #' @noRd
-check_ggmap <- function(missing) {
-  if (missing) {
-    cli::cli_abort(
-      c("!" = "No {.field ggmap} provided.",
-        "i" = "Please use {.fun ggmap::get_map} or similar to get a tileset."),
-      call = NULL
+geom_sf_richtext <-
+  function(mapping = ggplot2::aes(),
+           data = NULL,
+           stat = "sf_coordinates",
+           position = "identity",
+           ...,
+           parse = FALSE,
+           nudge_x = 0,
+           nudge_y = 0,
+           label.padding = ggplot2::unit(0.25, "lines"),
+           label.r = ggplot2::unit(
+             0.15,
+             "lines"
+           ),
+           label.size = 0.25,
+           na.rm = FALSE,
+           show.legend = NA,
+           inherit.aes = TRUE,
+           fun.geometry = NULL) {
+    if (!missing(nudge_x) || !missing(nudge_y)) {
+      if (!missing(position)) {
+        cli::cli_abort("Specify either {.arg position} or {.arg nudge_x}/{.arg nudge_y}")
+      }
+      position <- ggplot2::position_nudge(nudge_x, nudge_y)
+    }
+    ggplot2::layer_sf(
+      data = data,
+      mapping = mapping,
+      stat = stat,
+      geom = ggtext::GeomRichText,
+      position = position,
+      show.legend = show.legend,
+      inherit.aes = inherit.aes,
+      params = list(
+        label.padding = label.padding,
+        label.r = label.r,
+        label.size = label.size,
+        na.rm = na.rm,
+        fun.geometry = fun.geometry,
+        ...
+      )
     )
   }
+
+#' Check providers are valid
+#' @noRd
+check_providers <- function(provider, static) {
+  providers_dict <- c(
+    "OpenStreetMap" = "osm",
+    "CyclOSM" = "opencycle",
+    "OpenStreetMap.HOT" = "hotstyle",
+    "WaymarkedTrails.hiking" = "loviniahike",
+    "WaymarkedTrails.cycling" = "loviniacycle",
+    "Stadia.StamenToner" = "stamenbw",
+    "Stadia.StamenWatercolor" = "stamenwatercolor",
+    "Thunderforest.OpenCycleMap" = "osmtransport",
+    "Thunderforest.Landscape" = "thunderforestlandscape",
+    "Thunderforest.Outdoors" = "thunderforestoutdoors",
+    "CartoDB.DarkMatter" = "cartodark",
+    "CartoDB.Positron" = "cartolight"
+  )
+
+  if (static) {
+    provider <- provider %||% "osm"
+    if (provider %in% names(providers_dict)) {
+      provider <- providers_dict[provider]
+    }
+    rlang::arg_match(provider, rosm::osm.types(), multiple = FALSE)
+  } else {
+    provider <- provider %||% "OpenStreetMap"
+    if (any(provider %in% providers_dict)) {
+      for (i in seq_along(provider)) {
+        if (provider[i] %in% providers_dict) {
+          provider[i] <- unname(names(providers_dict)[providers_dict == provider[i]])
+        }
+      }
+    }
+    rlang::arg_match(provider, names(leaflet::providers), multiple = TRUE)
+  }
+  return(provider)
+}
+
+#' Check legend positions are valid
+#' @noRd
+check_legendposition <- function(position, static) {
+  if (static) {
+    settheme <- ggplot2::theme_get()
+    setposition <- settheme$legend.position %||% "right"
+    position <- position %||% setposition
+    rlang::arg_match(position, c("top", "right", "bottom", "left"), multiple = FALSE)
+  } else {
+    position <- position %||% "topright"
+    rlang::arg_match(position,
+      c("topright", "topleft", "bottomright", "bottomleft"),
+      multiple = TRUE
+    )
+  }
+  return(position)
+}
+
+#' strip away illegal characters in path
+#'
+#' This removes illegal characters from a path and replaces them with something
+#' unique. This allows for openairmaps to save files when `type` includes, for
+#' example, user-defined HTML tags.
+#'
+#' @noRd
+rm_illegal_chars <- function(x) {
+  dict <-
+    list(
+      "#" = "hash",
+      "\\%" = "percent",
+      "\\&" = "and",
+      "\\{" = "leftbracket",
+      "\\}" = "rightbracket",
+      "\\\\" = "backslash",
+      "<" = "leftchevron",
+      ">" = "rightchevron",
+      "\\*" = "asterisk",
+      "\\?" = "question",
+      "\\/" = "forwardslash",
+      " " = "space",
+      "\\$" = "dollar",
+      "\\!" = "exclame",
+      "\\'" = "singletick",
+      '\\"' = "doubletick",
+      "\\:" = "colon",
+      "\\@" = "at",
+      "\\+" = "plus",
+      "\\`" = "backtick",
+      "\\|" = "pipe",
+      "\\=" = "equals"
+    )
+
+  for (i in seq_along(dict)) {
+    x <- gsub(names(dict[i]), dict[[i]], x)
+  }
+
+  return(x)
+}
+
+#' Create a legend title
+#' @noRd
+create_legend_title <- function(static,
+                                legend.title.autotext,
+                                legend.title,
+                                str) {
+  if (legend.title.autotext) {
+    textfun <- quickTextHTML
+    if (static) {
+      textfun <- openair::quickText
+    }
+  } else {
+    textfun <- function(x) {
+      return(x)
+    }
+  }
+
+  legend.title <- legend.title %||% str
+  legend.title <- textfun(legend.title)
+  return(legend.title)
 }

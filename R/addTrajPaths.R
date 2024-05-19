@@ -24,7 +24,10 @@
 #' @param map a map widget object created from [leaflet::leaflet()].
 #' @param lng The decimal longitude.
 #' @param lat The decimal latitude.
-#' @param layerId The layer id.
+#' @param layerId The base string for the layer id. The actual layer IDs will be
+#'   in the format "layerId-linenum" for lines and "layerId_linenum-pointnum"
+#'   for points. For example, the first point of the first trajectory path will
+#'   be "layerId-1-1".
 #' @param group the name of the group the newly created layers should belong to
 #'   (for [leaflet::clearGroup()] and [leaflet::addLayersControl()] purposes).
 #'   Human-friendly group names are permitted–they need not be short,
@@ -44,7 +47,9 @@
 #'   [leaflet::addPolylines()] (i.e., use `color = ~ pal(nox)[1]`). Note that
 #'   `opacity` controls the opacity of the lines and `fillOpacity` the opacity
 #'   of the markers.
-#' @return A leaflet object.
+#' @returns A leaflet object.
+#' @seealso `shiny::runExample(package = "openairmaps")` to see examples of this
+#'   function used in a [shiny::shinyApp()]
 #' @export
 #'
 #' @examples
@@ -104,6 +109,12 @@ addTrajPaths <-
     )
 
     for (i in seq(length(unique(data$datef)))) {
+      if (!is.null(layerId)) {
+        layerid <- paste(layerId, i, sep = "-")
+      } else {
+        layerid <- NULL
+      }
+
       # get line/points data
       ldata <- dplyr::filter(data, .data$datef == unique(data$datef)[[i]])
       pdata <- dplyr::filter(ldata, .data$hour.inc %% npoints == 0)
@@ -117,20 +128,30 @@ addTrajPaths <-
           lat = ldata[[lat]],
           weight = 2,
           group = group,
-          layerId = layerId,
-          ...
-        ) %>%
-        leaflet::addCircleMarkers(
-          data = pdata,
-          radius = 3,
-          stroke = F,
-          lng = pdata[[lng]],
-          lat = pdata[[lat]],
-          group = group,
-          layerId = layerId,
-          popup = pdata[["lab"]],
+          layerId = layerid,
           ...
         )
+
+      for (i in 1:nrow(pdata)) {
+        if (!is.null(layerId)) {
+          layeridp <- paste(layerid, i, sep = "-")
+        } else {
+          layeridp <- NULL
+        }
+        map <-
+          leaflet::addCircleMarkers(
+            map = map,
+            data = pdata[i, ],
+            radius = 3,
+            stroke = F,
+            lng = pdata[i, ][[lng]],
+            lat = pdata[i, ][[lat]],
+            group = group,
+            layerId = layeridp,
+            popup = pdata[i, ][["lab"]],
+            ...
+          )
+      }
     }
 
     map

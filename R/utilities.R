@@ -65,16 +65,16 @@ quickTextHTML <- function(text) {
   text <- gsubic("pmcoarse", "PM<sub>coarse</sub>", text)
   text <- gsubic("pmf", "PM<sub>fine</sub>", text)
   text <- gsubic("pmfine", "PM<sub>fine</sub>", text)
-  text <- gsubic("gr25", "PM<sub>2.5</sub>&nbsp(grav.)", text)
-  text <- gsubic("gr2.5", "PM<sub>2.5</sub>&nbsp(grav.)", text)
-  text <- gsubic("gr10", "PM<sub>10</sub>&nbsp(grav.)", text)
+  text <- gsubic("gr25", "PM<sub>2.5</sub>&nbsp;(grav.)", text)
+  text <- gsubic("gr2.5", "PM<sub>2.5</sub>&nbsp;(grav.)", text)
+  text <- gsubic("gr10", "PM<sub>10</sub>&nbsp;(grav.)", text)
 
   # units
-  text <- gsub("ug/m3", "\u00B5g&nbspm<sup>-3</sup>", text)
-  text <- gsub("ng/m3", "ng&nbspm<sup>-3</sup>", text)
-  text <- gsub("mg/m3", "mg&nbspm<sup>-3</sup>", text)
-  text <- gsub("m/s", "m&nbsps<sup>-1</sup>", text)
-  text <- gsub("m/s2", "m&nbsps<sup>-2</sup>", text)
+  text <- gsub("ug/m3", "\u00B5g&nbsp;m<sup>-3</sup>", text)
+  text <- gsub("ng/m3", "ng&nbsp;m<sup>-3</sup>", text)
+  text <- gsub("mg/m3", "mg&nbsp;m<sup>-3</sup>", text)
+  text <- gsub("m/s", "m&nbsp;s<sup>-1</sup>", text)
+  text <- gsub("m/s2", "m&nbsp;s<sup>-2</sup>", text)
 
   return(text)
 }
@@ -167,7 +167,8 @@ buildPopup <-
            fun.dttm = function(x) paste(lubridate::floor_date(range(x, na.rm = TRUE), "day"), collapse = " to "),
            ...) {
     # check for old facet/control opts
-    type <- type %||% check_facet_control(...)
+    dots <- rlang::list2(...)
+    type <- type %||% check_facet_control(control = dots$control)
 
     # assume latitude/longitude
     latlon <- assume_latlon(
@@ -262,16 +263,8 @@ buildPopup <-
 #'   <https://github.com/ropensci/PostcodesioR/>
 #' @source <https://postcodes.io/>
 convertPostcode <- function(postcode) {
-  if (!requireNamespace("httr", quietly = TRUE) |
-    !requireNamespace("jsonlite", quietly = TRUE)) {
-    cli::cli_abort(
-      c(
-        "x" = "Please install the {.pkg httr} and {.pkg jsonlite} packages to use {.fun convertPostcode}.",
-        "i" = 'To do so, run {.code install.packages(c("httr", "jsonlite"))}'
-      )
-    )
-  }
-
+  rlang::check_installed("httr")
+  rlang::check_installed("jsonlite")
 
   postcode <- stringr::str_remove_all(postcode, " ")
   api <- stringr::str_glue("api.postcodes.io/postcodes/{postcode}")

@@ -29,11 +29,12 @@
 #'
 #' @param cols *Colours to use for plotting.*
 #'
-#'  *default:* `"RdBu"` | *scope:* dynamic & static
+#'  *default:* `rev(openair::openColours("RdBu", 10))` | *scope:* dynamic & static
 #'
 #'  The colours used for plotting, passed to [openair::openColours()].  It is
 #'  recommended to use a "diverging" colour palette (along with a symmetrical
 #'  `limit` scale) for effective visualisation.
+#' 
 #' @inheritDotParams openair::polarPlot -mydata -pollutant -x -limits -type
 #'   -cols -key -key.footer -key.header -key.position -units -angle.scale -alpha
 #'   -plot
@@ -66,7 +67,7 @@ diffMap <- function(before,
                     popup = NULL,
                     label = NULL,
                     provider = "OpenStreetMap",
-                    cols = "RdBu",
+                    cols = rev(openair::openColours("RdBu", 10)),
                     alpha = 1,
                     key = FALSE,
                     legend = TRUE,
@@ -80,6 +81,7 @@ diffMap <- function(before,
                     d.fig = 3.5,
                     static = FALSE,
                     static.nrow = NULL,
+                    progress = TRUE,
                     ...,
                     control = NULL) {
   # check basemap providers are valid
@@ -153,8 +155,8 @@ diffMap <- function(before,
   }
 
   # cut data
-  before <- quick_cutdata(data = before, type = type)
-  after <- quick_cutdata(data = after, type = type)
+  before <- openair::cutData(x = before, type = type %||% "default", ...)
+  after <- openair::cutData(x = after, type = type %||% "default", ...)
 
   # prep data
   before <-
@@ -220,7 +222,8 @@ diffMap <- function(before,
       split_col = split_col,
       d.fig = d.fig,
       popup = popup,
-      label = label
+      label = label,
+      progress = progress
     )
 
   if (static) {
@@ -323,7 +326,8 @@ create_polar_diffmarkers <-
            popup = NULL,
            label = NULL,
            d.fig,
-           dropcol = "conc") {
+           dropcol = "conc",
+           progress = TRUE) {
     # make temp directory
     dir <- tempdir()
 
@@ -400,7 +404,7 @@ create_polar_diffmarkers <-
         by = c(latitude, longitude, split_col)
       ) %>%
       dplyr::mutate(
-        plot = purrr::map2(before, after, fun, .progress = "Creating Polar Markers"),
+        plot = purrr::map2(before, after, fun, .progress = ifelse(progress, "Creating Polar Markers", FALSE)),
         url = paste0(dir, "/", .data[[latitude]], "_", .data[[longitude]], "_", .data[[split_col]], "_", id, ".png")
       )
 

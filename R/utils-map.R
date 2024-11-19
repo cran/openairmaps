@@ -156,7 +156,7 @@ checkMapPrep <-
 #' Prep data for mapping
 #' @noRd
 prepMapData <-
-  function(data, pollutant, control, ..., .to_narrow = TRUE) {
+  function(data, pollutant, control, ..., .to_narrow = TRUE, .pairwise = FALSE) {
     # check pollutant is there
     if (is.null(pollutant)) {
       cli::cli_abort(
@@ -179,11 +179,11 @@ prepMapData <-
     }
 
     # check if more than one pollutant & is.null split
-    if (length(pollutant) > 1 & !is.null(control)) {
+    if (length(pollutant) > 1 & !is.null(control) & !.pairwise) {
       cli::cli_warn(
         c(
-          "!" = "Multiple pollutants {.emph and} {.code control/facet} option specified",
-          "i" = "Please only specify multiple pollutants {.emph or} a {.code control/facet} option",
+          "!" = "Multiple pollutants {.emph and} {.code type} option specified",
+          "i" = "Please only specify multiple pollutants {.emph or} a {.code type} option",
           "i" = "Defaulting to splitting by {.code pollutant}"
         )
       )
@@ -423,7 +423,8 @@ create_polar_markers <-
            popup = NULL,
            label = NULL,
            d.fig,
-           dropcol = "conc") {
+           dropcol = "conc",
+           progress = TRUE) {
     # make temp directory
     dir <- tempdir()
 
@@ -468,7 +469,7 @@ create_polar_markers <-
     plots_df <-
       nested_df %>%
       dplyr::mutate(
-        plot = purrr::map(data, fun, .progress = "Creating Polar Markers"),
+        plot = purrr::map(data, fun, .progress = ifelse(progress, "Creating Polar Markers", FALSE)),
         url = paste0(
           dir,
           "/",
@@ -621,16 +622,8 @@ quick_popup <- function(data, popup, latitude, longitude, control) {
     columns = names,
     latitude = latitude,
     longitude = longitude,
-    type = control
+    type = control %||% "default"
   )
-}
-
-#' does 'cutdata'
-#' @param data,type inherited from parent function
-#' @noRd
-quick_cutdata <- function(data, type) {
-  if (is.null(type)) type <- "default"
-  openair::cutData(data, type = type)
 }
 
 #' checks if multiple pollutants have been provided with a "fixed" scale

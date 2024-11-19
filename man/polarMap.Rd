@@ -31,6 +31,7 @@ polarMap(
   d.fig = 3.5,
   static = FALSE,
   static.nrow = NULL,
+  progress = TRUE,
   ...,
   control = NULL
 )
@@ -52,13 +53,15 @@ used in conjunction with \code{crs}).}
 \strong{required} | \emph{scope:} dynamic & static
 
 The column name(s) of the pollutant(s) to plot. If multiple pollutants are
-specified the \code{type} argument will no longer be able to be used, and:
+specified and a non-pairwise statistic is supplied, the \code{type} argument
+will no longer be able to be used and:
 \itemize{
 \item \emph{Dynamic}: The pollutants can be toggled between using a "layer control" menu.
 \item \emph{Static:}: The pollutants will each appear in a different panel.
 }
 
-Multiple \code{pollutants} prohibit the use of the \code{type} argument.}
+Multiple \code{pollutants} prohibit the use of the \code{type} argument for
+non-pairwise statistics.}
 
 \item{x}{\emph{The radial axis variable.}
 
@@ -276,6 +279,14 @@ Controls the number of rows of panels on a static map when multiple
 \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}. The default, \code{NULL}, results in a roughly square
 grid of panels.}
 
+\item{progress}{\emph{Show a progress bar?}
+
+\emph{default:} \code{TRUE} | \emph{scope:} dynamic & static
+
+By default, a progress bar is shown to visualise the function's progress
+creating individual polar markers. This option allows this to be turned
+off, if desired.}
+
 \item{...}{
   Arguments passed on to \code{\link[openair:polarPlot]{openair::polarPlot}}
   \describe{
@@ -454,7 +465,9 @@ regression statistics are used such as \emph{r}. Default is \code{4}.}
 correlation or regression techniques are used. Only \code{"gaussian"} is
 supported but this may be enhanced in the future.}
     \item{\code{formula.label}}{When pair-wise statistics such as regression slopes are
-calculated and plotted, should a formula label be displayed?}
+calculated and plotted, should a formula label be displayed?
+\code{formula.label} will also determine whether concentration information
+is printed when \code{statistic = "cpf"}.}
     \item{\code{tau}}{The quantile to be estimated when \code{statistic} is set to
 \code{"quantile.slope"}. Default is \code{0.5} which is equal to the median
 and will be ignored if \code{"quantile.slope"} is not used.}

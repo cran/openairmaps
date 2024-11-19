@@ -1,3 +1,27 @@
+# openairmaps 0.9.1
+
+## New features
+
+* Pairwise statistics (e.g., `"robust_slope"`) are now supported by `polarMap()`. (#72)
+
+* The `polarMap()` family has gained the `progress` argument, allowing users to switch the progress bar on and off.
+
+* `trajMapStatic()` has gained the `size` and `linewidth` arguments, which directly map onto the arguments in `ggplot2::geom_point()` and `ggplot2::geom_path()`, respectively. These can either be a column of the data (like `colour`), or can be an absolute value (e.g., `2L`). Note that, by default, `linewidth` takes the value of `size`, but both can be set independently.
+
+## Bug fixes
+
+* Vectors greater than length 1 passed to `popup` in the `polarMap()` argument will no longer error when `type = NULL`.
+
+* `...` will successfully pass to `openair::cutData()` in the `polarMap()` and `trajMap()` families of functions.
+
+* The default `diffMap()` colour scale will no longer appear inverted compared to `openair::polarDiff()`.
+
+* Fixed an issue in which `quickTextHTML()` would incorrectly format non breaking spaces when doing, e.g., `quickTextHTML("ug/m3")`.
+
+* The order in which `trajMapStatic()` draws points and paths has been tweaked, which should ensure that markers are drawn on top of their respective path, rather than on top of all paths.
+
+* `buildPopup()` will now work correctly if no `type` is provided.
+
 # openairmaps 0.9.0
 
 ## Breaking changes

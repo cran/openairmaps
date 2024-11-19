@@ -9,6 +9,8 @@ trajMapStatic(
   colour = "height",
   type = NULL,
   group = NULL,
+  size = NULL,
+  linewidth = size,
   longitude = "lon",
   latitude = "lat",
   npoints = 12,
@@ -35,13 +37,14 @@ with \code{\link[openair:importTraj]{openair::importTraj()}}.}
 A data frame containing HYSPLIT model outputs. If this data were not
 obtained using \code{\link[openair:importTraj]{openair::importTraj()}}.}
 
-\item{colour}{\emph{Column to be used for colouring each trajectory.}
+\item{colour}{\emph{Data column to map to the colour of the trajectories.}
 
 \emph{default:} \code{NULL}
 
 This column may be numeric, character, factor or date(time). This will
 commonly be a pollutant concentration which has been joined (e.g., by
-\code{\link[dplyr:mutate-joins]{dplyr::left_join()}}) to the trajectory data by "date".}
+\code{\link[dplyr:mutate-joins]{dplyr::left_join()}}) to the trajectory data by "date". The scale can be
+edited after the fact using \code{\link[ggplot2:scale_colour_continuous]{ggplot2::scale_color_continuous()}} or similar.}
 
 \item{type}{\emph{A method to condition the \code{data} for separate plotting.}
 
@@ -57,6 +60,18 @@ as different panels. Passed to \code{\link[openair:cutData]{openair::cutData()}}
 By default, trajectory paths are distinguished using the arrival date.
 \code{group} allows for additional columns to be used (e.g., \code{"receptor"} if
 multiple receptors are being plotted).}
+
+\item{size, linewidth}{\emph{Data column to map to the size/width of the trajectory
+marker/paths, or absolute size value.}
+
+\emph{default:} \code{NULL}
+
+Similar to the \code{colour} argument, this defines a column to map to the size
+of the circular markers or the width of the paths. These scales can be
+edited after the fact using \code{\link[ggplot2:scale_size]{ggplot2::scale_size_continuous()}},
+\code{\link[ggplot2:scale_linewidth]{ggplot2::scale_linewidth_continuous()}}, or similar. If numeric, the value
+will be directly provided to \code{ggplot2::geom_point(size = )} or
+\code{ggplot2::geom_path(linewidth = )}.}
 
 \item{latitude, longitude}{\emph{The decimal latitude/longitude.}
 
@@ -142,66 +157,25 @@ draws solid lines.}
 \item{facet}{Deprecated. Please use \code{type}.}
 
 \item{...}{
-  Arguments passed on to \code{\link[ggplot2:ggsf]{ggplot2::coord_sf}}
+  Arguments passed on to \code{\link[openair:cutData]{openair::cutData}}
   \describe{
-    \item{\code{expand}}{If \code{TRUE}, the default, adds a small expansion factor to
-the limits to ensure that data and axes don't overlap. If \code{FALSE},
-limits are taken exactly from the data or \code{xlim}/\code{ylim}.}
-    \item{\code{datum}}{CRS that provides datum to use when generating graticules.}
-    \item{\code{label_graticule}}{Character vector indicating which graticule lines should be labeled
-where. Meridians run north-south, and the letters \code{"N"} and \code{"S"} indicate that
-they should be labeled on their north or south end points, respectively.
-Parallels run east-west, and the letters \code{"E"} and \code{"W"} indicate that they
-should be labeled on their east or west end points, respectively. Thus,
-\code{label_graticule = "SW"} would label meridians at their south end and parallels at
-their west end, whereas \code{label_graticule = "EW"} would label parallels at both
-ends and meridians not at all. Because meridians and parallels can in general
-intersect with any side of the plot panel, for any choice of \code{label_graticule} labels
-are not guaranteed to reside on only one particular side of the plot panel. Also,
-\code{label_graticule} can cause labeling artifacts, in particular if a graticule line
-coincides with the edge of the plot panel. In such circumstances, \code{label_axes} will
-generally yield better results and should be used instead.
-
-This parameter can be used alone or in combination with \code{label_axes}.}
-    \item{\code{label_axes}}{Character vector or named list of character values
-specifying which graticule lines (meridians or parallels) should be labeled on
-which side of the plot. Meridians are indicated by \code{"E"} (for East) and
-parallels by \code{"N"} (for North). Default is \code{"--EN"}, which specifies
-(clockwise from the top) no labels on the top, none on the right, meridians
-on the bottom, and parallels on the left. Alternatively, this setting could have been
-specified with \code{list(bottom = "E", left = "N")}.
-
-This parameter can be used alone or in combination with \code{label_graticule}.}
-    \item{\code{lims_method}}{Method specifying how scale limits are converted into
-limits on the plot region. Has no effect when \code{default_crs = NULL}.
-For a very non-linear CRS (e.g., a perspective centered
-around the North pole), the available methods yield widely differing results, and
-you may want to try various options. Methods currently implemented include \code{"cross"}
-(the default), \code{"box"}, \code{"orthogonal"}, and \code{"geometry_bbox"}. For method \code{"cross"},
-limits along one direction (e.g., longitude) are applied at the midpoint of the
-other direction (e.g., latitude). This method avoids excessively large limits for
-rotated coordinate systems but means that sometimes limits need to be expanded a
-little further if extreme data points are to be included in the final plot region.
-By contrast, for method \code{"box"}, a box is generated out of the limits along both directions,
-and then limits in projected coordinates are chosen such that the entire box is
-visible. This method can yield plot regions that are too large. Finally, method
-\code{"orthogonal"} applies limits separately along each axis, and method
-\code{"geometry_bbox"} ignores all limit information except the bounding boxes of any
-objects in the \code{geometry} aesthetic.}
-    \item{\code{ndiscr}}{Number of segments to use for discretising graticule lines;
-try increasing this number when graticules look incorrect.}
-    \item{\code{default}}{Is this the default coordinate system? If \code{FALSE} (the default),
-then replacing this coordinate system with another one creates a message alerting
-the user that the coordinate system is being replaced. If \code{TRUE}, that warning
-is suppressed.}
-    \item{\code{clip}}{Should drawing be clipped to the extent of the plot panel? A
-setting of \code{"on"} (the default) means yes, and a setting of \code{"off"}
-means no. In most cases, the default of \code{"on"} should not be changed,
-as setting \code{clip = "off"} can cause unexpected results. It allows
-drawing of data points anywhere on the plot, including in the plot margins. If
-limits are set via \code{xlim} and \code{ylim} and some data points fall outside those
-limits, then those data points may show up in places such as the axes, the
-legend, the plot title, or the plot margins.}
+    \item{\code{hemisphere}}{Can be \code{"northern"} or \code{"southern"}, used to
+split data into seasons.}
+    \item{\code{n.levels}}{Number of quantiles to split numeric data into.}
+    \item{\code{start.day}}{What day of the week should the \code{type = "weekday"}
+start on?  The user can change the start day by supplying an integer
+between 0 and 6. Sunday = 0, Monday = 1, \ldots For example to start the
+weekday plots on a Saturday, choose \code{start.day = 6}.}
+    \item{\code{is.axis}}{A logical (\code{TRUE}/\code{FALSE}), used to request
+shortened cut labels for axes.}
+    \item{\code{local.tz}}{Used for identifying whether a date has daylight savings time
+(DST) applied or not. Examples include \code{local.tz = "Europe/London"},
+\code{local.tz = "America/New_York"} i.e. time zones that assume DST.
+\url{https://en.wikipedia.org/wiki/List_of_zoneinfo_time_zones} shows time
+zones that should be valid for most systems. It is important that the
+original data are in GMT (UTC) or a fixed offset from GMT. See
+\code{import} and the openair manual for information on how to import data
+and ensure no DST is applied.}
   }}
 }
 \value{

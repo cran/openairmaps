@@ -73,6 +73,7 @@ pollroseMap <- function(data,
                         d.fig = 3.5,
                         static = FALSE,
                         static.nrow = NULL,
+                        progress = TRUE,
                         ...,
                         control = NULL) {
   # check basemap providers are valid
@@ -92,7 +93,7 @@ pollroseMap <- function(data,
   longitude <- latlon$longitude
 
   # cut data
-  data <- quick_cutdata(data = data, type = type)
+  data <- openair::cutData(x = data, type = type %||% "default", ...)
 
   # deal with popups
   if (length(popup) > 1) {
@@ -167,7 +168,8 @@ pollroseMap <- function(data,
       split_col = split_col,
       d.fig = d.fig,
       popup = popup,
-      label = label
+      label = label,
+      progress = progress
     )
 
   if (static) {

@@ -7,6 +7,7 @@
 #' interacted with. Using the `static` argument allows for static images to be
 #' produced instead.
 #'
+#' @inheritSection polarMap Parallel processing with mirai
 #' @inheritSection polarMap Customisation of static maps using ggplot2
 #' @family directional analysis maps
 #'
@@ -45,34 +46,41 @@
 #'   provider = "CartoDB.Voyager"
 #' )
 #' }
-percentileMap <- function(data,
-                          pollutant = NULL,
-                          percentile = c(25, 50, 75, 90, 95),
-                          intervals = "fixed",
-                          latitude = NULL,
-                          longitude = NULL,
-                          crs = 4326,
-                          type = NULL,
-                          popup = NULL,
-                          label = NULL,
-                          provider = "OpenStreetMap",
-                          cols = "turbo",
-                          alpha = 1,
-                          key = FALSE,
-                          legend = TRUE,
-                          legend.position = NULL,
-                          legend.title = NULL,
-                          legend.title.autotext = TRUE,
-                          control.collapsed = FALSE,
-                          control.position = "topright",
-                          control.autotext = TRUE,
-                          d.icon = 200,
-                          d.fig = 3.5,
-                          static = FALSE,
-                          static.nrow = NULL,
-                          progress = TRUE,
-                          ...,
-                          control = NULL) {
+percentileMap <- function(
+  data,
+  pollutant = NULL,
+  percentile = c(25, 50, 75, 90, 95),
+  intervals = "fixed",
+  latitude = NULL,
+  longitude = NULL,
+  crs = 4326,
+  type = NULL,
+  popup = NULL,
+  label = NULL,
+  provider = "OpenStreetMap",
+  cols = "turbo",
+  alpha = 1,
+  theme = NULL,
+  key.position = "none",
+  legend = TRUE,
+  legend.position = NULL,
+  legend.title = NULL,
+  legend.title.autotext = TRUE,
+  control.collapsed = FALSE,
+  control.position = "topright",
+  control.autotext = TRUE,
+  d.icon = 200,
+  d.fig = 3.5,
+  static = FALSE,
+  static.nrow = NULL,
+  progress = TRUE,
+  ...,
+  control = NULL
+) {
+  if (static) {
+    check_installed_static()
+  }
+
   # check basemap providers are valid
   provider <- check_providers(provider, static)
   legend.position <- check_legendposition(legend.position, static)
@@ -93,6 +101,15 @@ percentileMap <- function(data,
   intervals <- check_multipoll(intervals, pollutant)
 
   if ("fixed" %in% intervals) {
+    if (is.null(pollutant)) {
+      cli::cli_abort(
+        c(
+          "x" = "{.code pollutant} is missing with no default.",
+          "i" = "Please provide a column of {.code data} which represents the pollutant(s) of interest."
+        )
+      )
+    }
+
     data <-
       dplyr::mutate(data, latlng = paste(.data[[latitude]], .data[[longitude]]))
 
@@ -162,26 +179,35 @@ percentileMap <- function(data,
     split_col <- "pollutant_name"
   }
 
-  # define function
-  fun <- function(data) {
-    openair::percentileRose(
-      data,
+  # arguments for function
+  fun_args <- append(
+    list(
       pollutant = "conc",
       percentile = percentile,
       plot = FALSE,
       cols = cols,
-      alpha = alpha,
-      key = key,
-      intervals = theIntervals,
-      ...,
-      par.settings = list(axis.line = list(col = "transparent"))
-    )$plot
+      key.position = key.position,
+      intervals = theIntervals
+    ),
+    rlang::list2(...)
+  )
+
+  # define function
+  fun <- function(data) {
+    rlang::exec(
+      openair::percentileRose,
+      !!!append(
+        list(mydata = data),
+        fun_args
+      )
+    )
   }
 
   # plot and save static markers
   plots_df <-
     create_polar_markers(
       fun = fun,
+      fun_args = fun_args,
       data = data,
       latitude = latitude,
       longitude = longitude,
@@ -189,6 +215,7 @@ percentileMap <- function(data,
       d.fig = d.fig,
       popup = popup,
       label = label,
+      theme = theme,
       progress = progress
     )
 
@@ -205,7 +232,8 @@ percentileMap <- function(data,
         facet.nrow = static.nrow,
         d.icon = d.icon,
         crs = crs,
-        provider = provider
+        provider = provider,
+        alpha = alpha
       )
 
     # create legend
@@ -215,12 +243,12 @@ percentileMap <- function(data,
     intervals <- intervals[!is.na(intervals)]
     intervals <- factor(intervals, intervals)
     pal <-
-      openair::openColours(scheme = cols, n = length(intervals)) %>%
+      openair::openColours(scheme = cols, n = length(intervals)) |>
       stats::setNames(intervals)
 
     # create dummy df for creating legend
     dummy <-
-      dplyr::distinct(plots_df, .data[[longitude]], .data[[latitude]]) %>%
+      dplyr::distinct(plots_df, .data[[longitude]], .data[[latitude]]) |>
       tidyr::crossing(intervals)
 
     if (legend) {
@@ -236,14 +264,16 @@ percentileMap <- function(data,
         map +
         ggplot2::geom_point(
           data = dummy,
-          ggplot2::aes(.data[[longitude]], .data[[latitude]],
-            fill = .data[["intervals"]]
+          ggplot2::aes(
+            .data[[longitude]],
+            .data[[latitude]],
+            color = .data[["intervals"]]
           ),
           size = 0,
           key_glyph = ggplot2::draw_key_rect
         ) +
-        ggplot2::scale_fill_manual(values = pal, drop = FALSE) +
-        ggplot2::labs(fill = legend.title) +
+        ggplot2::scale_color_manual(values = pal, drop = FALSE) +
+        ggplot2::labs(color = legend.title) +
         ggplot2::theme(legend.position = legend.position)
     }
   }
@@ -263,7 +293,8 @@ percentileMap <- function(data,
         split_col,
         control.collapsed,
         control.position,
-        control.autotext
+        control.autotext,
+        alpha
       )
 
     legend.title <-
@@ -275,7 +306,7 @@ percentileMap <- function(data,
       )
 
     # add legend
-    if (all(!is.na(percentile)) & legend) {
+    if (!anyNA(percentile) && legend) {
       percs <- unique(c(0, percentile))
       map <-
         leaflet::addLegend(

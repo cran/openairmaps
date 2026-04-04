@@ -2,11 +2,7 @@
 #' @author David Carslaw
 #' @noRd
 checkMapPrep <-
-  function(mydata,
-           Names,
-           remove.calm = TRUE,
-           remove.neg = TRUE,
-           wd = "wd") {
+  function(mydata, Names, remove.calm = TRUE, remove.neg = TRUE, wd = "wd") {
     ## deal with conditioning variable if present, if user-defined, must exist
     ## in data pre-defined types existing conditioning variables that only
     ## depend on date (which is checked)
@@ -32,7 +28,7 @@ checkMapPrep <-
     varNames <- c(Names) ## names we want to be there
     matching <- varNames %in% all.vars
 
-    if (any(!matching)) {
+    if (!all(matching)) {
       ## not all variables are present
       stop(
         "Can't find the variable(s): ",
@@ -56,7 +52,6 @@ checkMapPrep <-
       }
     }
 
-
     ## sometimes ratios are considered which can results in infinite values
     ## make sure all infinite values are set to NA
     mydata[] <- lapply(mydata, function(x) {
@@ -64,7 +59,7 @@ checkMapPrep <-
     })
 
     if ("ws" %in% Names) {
-      if ("ws" %in% Names & is.numeric(mydata$ws)) {
+      if ("ws" %in% Names && is.numeric(mydata$ws)) {
         ## check for negative wind speeds
         if (any(sign(mydata$ws[!is.na(mydata$ws)]) == -1)) {
           if (remove.neg) {
@@ -81,10 +76,14 @@ checkMapPrep <-
     ## data not rounded will be rounded to nearest 10 degrees
     ## assumes 10 is average of 5-15 etc
     if (wd %in% Names) {
-      if (wd %in% Names & is.numeric(mydata[, wd])) {
+      if (wd %in% Names && is.numeric(mydata[, wd])) {
         ## check for wd <0 or > 360
-        if (any(sign(mydata[[wd]][!is.na(mydata[[wd]])]) == -1 |
-          mydata[[wd]][!is.na(mydata[[wd]])] > 360)) {
+        if (
+          any(
+            sign(mydata[[wd]][!is.na(mydata[[wd]])]) == -1 |
+              mydata[[wd]][!is.na(mydata[[wd]])] > 360
+          )
+        ) {
           warning("Wind direction < 0 or > 360; removing these data")
           mydata[[wd]][mydata[[wd]] < 0] <- NA
           mydata[[wd]][mydata[[wd]] > 360] <- NA
@@ -109,10 +108,9 @@ checkMapPrep <-
       }
     }
 
-
     ## make sure date is ordered in time if present
     if ("date" %in% Names) {
-      if ("POSIXlt" %in% class(mydata$date)) {
+      if (inherits(mydata$date, "POSIXlt")) {
         stop("date should be in POSIXct format not POSIXlt")
       }
 
@@ -136,7 +134,8 @@ checkMapPrep <-
         warning(
           paste(
             "Missing dates detected, removing",
-            length(ids), "lines"
+            length(ids),
+            "lines"
           ),
           call. = FALSE
         )
@@ -156,7 +155,14 @@ checkMapPrep <-
 #' Prep data for mapping
 #' @noRd
 prepMapData <-
-  function(data, pollutant, control, ..., .to_narrow = TRUE, .pairwise = FALSE) {
+  function(
+    data,
+    pollutant,
+    control,
+    ...,
+    .to_narrow = TRUE,
+    .pairwise = FALSE
+  ) {
     # check pollutant is there
     if (is.null(pollutant)) {
       cli::cli_abort(
@@ -175,11 +181,14 @@ prepMapData <-
 
     # check to see if variables exist in data
     if (length(intersect(vars, names(data))) != length(vars)) {
-      stop(paste(vars[which(!vars %in% names(data))], "not found in data"), call. = FALSE)
+      stop(
+        paste(vars[which(!vars %in% names(data))], "not found in data"),
+        call. = FALSE
+      )
     }
 
     # check if more than one pollutant & is.null split
-    if (length(pollutant) > 1 & !is.null(control) & !.pairwise) {
+    if (length(pollutant) > 1 && !is.null(control) && !.pairwise) {
       cli::cli_warn(
         c(
           "!" = "Multiple pollutants {.emph and} {.code type} option specified",
@@ -211,8 +220,9 @@ prepMapData <-
   }
 
 #' guess latlon
+#' @param quiet Used to silence cli informs
 #' @noRd
-assume_latlon <- function(data, latitude, longitude) {
+assume_latlon <- function(data, latitude, longitude, quiet = FALSE) {
   guess_latlon <- function(data, latlon = c("lat", "lon")) {
     x <- names(data)
     if (latlon == "lat") {
@@ -223,46 +233,43 @@ assume_latlon <- function(data, latitude, longitude) {
       str <- c("longitude", "longitud", "lon", "long", "lng")
     }
     str <-
-      c(
-        str,
-        toupper(str),
-        tolower(str),
-        stringr::str_to_title(str)
-      )
+      c(str, toupper(str), tolower(str), stringr::str_to_title(str))
     id <- x %in% str
     out <- x[id]
     len <- length(out)
     if (len > 1) {
-      cli::cli_abort("Cannot identify {name}: Multiple possible matches ({out})",
+      cli::cli_abort(
+        "Cannot identify {name}: Multiple possible matches ({out})",
         call = NULL
       )
-      return(NULL)
     } else if (len == 0) {
       cli::cli_abort("Cannot identify {name}: No clear match.", call = NULL)
-      return(NULL)
     } else {
-      cli::cli_alert_info("Assuming {name} is '{out}'")
+      if (!quiet) {
+        cli::cli_alert_info("Assuming {name} is '{out}'")
+      }
       return(out)
     }
   }
 
-  if (is.null(latitude) | is.null(longitude)) {
+  if (is.null(latitude) || is.null(longitude)) {
     if (is.null(latitude)) {
       latitude <- guess_latlon(data, "lat")
     } else {
-      cli::cli_alert_success("Latitude provided as '{latitude}'")
+      if (!quiet) {
+        cli::cli_alert_success("Latitude provided as '{latitude}'")
+      }
     }
     if (is.null(longitude)) {
       longitude <- guess_latlon(data, "lon")
     } else {
-      cli::cli_alert_success("Latitude provided as '{longitude}'")
+      if (!quiet) {
+        cli::cli_alert_success("Longitude provided as '{longitude}'")
+      }
     }
   }
 
-  out <- list(
-    latitude = latitude,
-    longitude = longitude
-  )
+  out <- list(latitude = latitude, longitude = longitude)
 }
 
 #' get breaks for the "rose" functions
@@ -272,7 +279,7 @@ assume_latlon <- function(data, latitude, longitude) {
 #' @param polrose use pollutionrose method? T/F
 #' @noRd
 getBreaks <- function(breaks, ws.int, vec, polrose) {
-  if (is.numeric(breaks) & length(breaks) == 1 & polrose) {
+  if (is.numeric(breaks) && length(breaks) == 1 && polrose) {
     breaks <- unique(pretty(
       c(
         min(vec, na.rm = TRUE),
@@ -284,8 +291,8 @@ getBreaks <- function(breaks, ws.int, vec, polrose) {
   if (length(breaks) == 1) {
     breaks <- 0:(breaks - 1) * ws.int
   }
-  if (max(breaks) < max(vec, na.rm = T)) {
-    breaks <- c(breaks, max(vec, na.rm = T))
+  if (max(breaks) < max(vec, na.rm = TRUE)) {
+    breaks <- c(breaks, max(vec, na.rm = TRUE))
   }
   breaks <- unique(breaks)
   breaks <- sort(breaks)
@@ -295,36 +302,40 @@ getBreaks <- function(breaks, ws.int, vec, polrose) {
 #' make leaflet map from scratch
 #' @noRd
 make_leaflet_map <-
-  function(data,
-           latitude,
-           longitude,
-           crs,
-           provider,
-           d.icon,
-           popup,
-           label,
-           split_col,
-           control.collapsed,
-           control.position,
-           control.autotext) {
+  function(
+    data,
+    latitude,
+    longitude,
+    crs,
+    provider,
+    d.icon,
+    popup,
+    label,
+    split_col,
+    control.collapsed,
+    control.position,
+    control.autotext,
+    alpha
+  ) {
     if (control.autotext) {
       textfun <- quickTextHTML
     } else {
       textfun <- identity
     }
 
-    data <- sf::st_as_sf(data, coords = c(longitude, latitude), crs = crs) %>%
+    data <- sf::st_as_sf(data, coords = c(longitude, latitude), crs = crs) |>
       sf::st_transform(crs = 4326)
 
     # create map
     map <- leaflet::leaflet(data)
 
     # add provider tiles
-    if (is.null(names(provider)) | "" %in% names(provider)) {
+    if (is.null(names(provider)) || "" %in% names(provider)) {
       names(provider) <- provider
     }
     for (i in seq_along(provider)) {
-      map <- leaflet::addProviderTiles(map,
+      map <- leaflet::addProviderTiles(
+        map,
         provider[[i]],
         group = names(provider)[[i]]
       )
@@ -351,7 +362,8 @@ make_leaflet_map <-
         popupAnchorX = -.Machine$double.eps,
         popupAnchorY = -(height / 2) * 0.7
       ),
-      group = textfun(data[[split_col]])
+      group = textfun(data[[split_col]]),
+      options = leaflet::markerOptions(opacity = alpha)
     )
 
     if (!is.null(popup)) {
@@ -367,9 +379,12 @@ make_leaflet_map <-
     flag_provider <- dplyr::n_distinct(provider) > 1
     flag_split <- dplyr::n_distinct(data[[split_col]]) > 1
     opts <-
-      leaflet::layersControlOptions(collapsed = control.collapsed, autoZIndex = FALSE)
+      leaflet::layersControlOptions(
+        collapsed = control.collapsed,
+        autoZIndex = FALSE
+      )
 
-    if (flag_provider & flag_split) {
+    if (flag_provider && flag_split) {
       map <-
         leaflet::addLayersControl(
           map,
@@ -377,18 +392,18 @@ make_leaflet_map <-
           baseGroups = textfun(unique(data[[split_col]])),
           overlayGroups = names(provider),
           options = opts
-        ) %>%
+        ) |>
         leaflet::hideGroup(group = names(provider)[-1])
-    } else if (flag_provider & !flag_split) {
+    } else if (flag_provider && !flag_split) {
       map <-
         leaflet::addLayersControl(
           map,
           position = control.position,
           baseGroups = names(provider),
           options = opts
-        ) %>%
+        ) |>
         leaflet::hideGroup(group = names(provider)[-1])
-    } else if (!flag_provider & flag_split) {
+    } else if (!flag_provider && flag_split) {
       map <-
         leaflet::addLayersControl(
           map,
@@ -406,7 +421,9 @@ make_leaflet_map <-
 theme_static <- function() {
   ggplot2::`%+replace%`(
     ggplot2::theme_minimal(),
-    ggplot2::theme(panel.border = ggplot2::element_rect(fill = NA, color = "black"))
+    ggplot2::theme(
+      panel.border = ggplot2::element_rect(fill = NA, color = "black")
+    )
   )
 }
 
@@ -415,16 +432,21 @@ theme_static <- function() {
 #' @param latitude,longitude,split_col,d.fig inherited from parent
 #' @noRd
 create_polar_markers <-
-  function(fun,
-           data = data,
-           latitude = latitude,
-           longitude = longitude,
-           split_col = split_col,
-           popup = NULL,
-           label = NULL,
-           d.fig,
-           dropcol = "conc",
-           progress = TRUE) {
+  function(
+    fun,
+    fun_args,
+    data = data,
+    latitude = latitude,
+    longitude = longitude,
+    split_col = split_col,
+    popup = NULL,
+    label = NULL,
+    d.fig,
+    dropcol = "conc",
+    theme,
+    polar_fun = NULL,
+    progress = TRUE
+  ) {
     # make temp directory
     dir <- tempdir()
 
@@ -446,13 +468,24 @@ create_polar_markers <-
 
     # get number of rows
     valid_rows <-
-      nrow(dplyr::distinct(data, .data[[latitude]], .data[[longitude]], .data[[split_col]]))
+      nrow(dplyr::distinct(
+        data,
+        .data[[latitude]],
+        .data[[longitude]],
+        .data[[split_col]]
+      ))
 
     # nest data
-    nested_df <- data %>%
-      tidyr::nest(data = -dplyr::all_of(c(
-        latitude, longitude, split_col, popup, label
-      )))
+    nested_df <- data |>
+      tidyr::nest(
+        data = -dplyr::all_of(c(
+          latitude,
+          longitude,
+          split_col,
+          popup,
+          label
+        ))
+      )
 
     # check for popup issues
     if (nrow(nested_df) > valid_rows) {
@@ -467,9 +500,8 @@ create_polar_markers <-
 
     # create plots
     plots_df <-
-      nested_df %>%
       dplyr::mutate(
-        plot = purrr::map(data, fun, .progress = ifelse(progress, "Creating Polar Markers", FALSE)),
+        nested_df,
         url = paste0(
           dir,
           "/",
@@ -493,29 +525,42 @@ create_polar_markers <-
       height <- d.fig[[2]]
     }
 
-    purrr::pwalk(
-      list(
-        plots_df[[latitude]],
-        plots_df[[longitude]],
-        rm_illegal_chars(plots_df[[split_col]]),
-        plots_df$plot
-      ),
-      .f = ~ {
-        grDevices::png(
-          filename = paste0(dir, "/", ..1, "_", ..2, "_", ..3, "_", id, ".png"),
-          width = width * 300,
-          height = height * 300,
-          res = 300,
-          bg = "transparent",
-          type = "cairo",
-          antialias = "none"
-        )
+    # create and save plots
+    plots_df$plot <-
+      purrr::pmap(
+        .l = dplyr::select(plots_df, "data", "url"),
+        .f = purrr::in_parallel(
+          function(data, url) {
+            openair_obj <- tryCatch(error = function(cnd) {}, fun(data))
 
-        plot(..4)
-
-        grDevices::dev.off()
-      }
-    )
+            if (!is.null(openair_obj)) {
+              # save plot
+              ggplot2::ggsave(
+                plot = openair_obj$plot +
+                  ggplot2::theme(
+                    plot.margin = ggplot2::unit(rep(0, 4), "cm"),
+                    legend.background = ggplot2::element_blank(),
+                    legend.title = ggplot2::element_blank()
+                  ) +
+                  theme,
+                filename = url,
+                width = width * 0.75,
+                height = height * 0.75,
+                dpi = 72,
+                bg = "transparent"
+              )
+              return(openair_obj$data)
+            }
+          },
+          fun = fun,
+          fun_args = fun_args,
+          width = width,
+          height = height,
+          polar_fun = polar_fun,
+          theme = theme
+        ),
+        .progress = progress
+      )
 
     return(plots_df)
   }
@@ -525,7 +570,7 @@ create_polar_markers <-
 #' @noRd
 estimate_bbox <-
   function(data) {
-    bbox <- sf::st_bbox(data) %>% as.list()
+    bbox <- sf::st_bbox(data) |> as.list()
     xdiff <- abs(bbox$xmin - bbox$xmax) / 2
     ydiff <- abs(bbox$ymin - bbox$ymax) / 2
     diff <- mean(c(xdiff, ydiff))
@@ -541,16 +586,26 @@ estimate_bbox <-
 #' @param plots_df `plots_df`
 #' @noRd
 create_static_map <-
-  function(plots_df,
-           latitude,
-           longitude,
-           crs,
-           provider,
-           split_col,
-           pollutant,
-           d.icon,
-           facet,
-           facet.nrow) {
+  function(
+    plots_df,
+    latitude,
+    longitude,
+    crs,
+    provider,
+    split_col,
+    pollutant,
+    d.icon,
+    facet,
+    facet.nrow,
+    alpha
+  ) {
+    check_installed_static()
+
+    # silence R CMD check
+    if (FALSE) {
+      prettymapr::makebbox(1, 1, 1, 1)
+    }
+
     # work out width/height
     if (length(d.icon) == 1) {
       width <- d.icon
@@ -562,25 +617,46 @@ create_static_map <-
     }
 
     link_to_img <- function(x, width, height) {
-      stringr::str_glue("<img src='{x}' width='{width}' height='{height}'/>")
+      stringr::str_glue(
+        "<img src='{x}' width='{width}' height='{height}'/>"
+      )
     }
 
     # don't turn facet levels into chr, keep as fct
-    if (length(pollutant) > 1 | !is.null(facet)) {
-      levels(plots_df[[split_col]]) <- quickTextHTML(levels(plots_df[[split_col]]))
+    if (length(pollutant) > 1 || !is.null(facet)) {
+      levels(plots_df[[split_col]]) <- quickTextHTML(levels(plots_df[[
+        split_col
+      ]]))
     }
 
+    # turn into sf object
     plots_sf <-
       sf::st_as_sf(
         plots_df,
         coords = c(longitude, latitude),
         crs = crs,
         remove = FALSE
-      ) %>%
+      ) |>
       sf::st_transform(crs = 4326)
 
+    # add alpha channel, if requested
+    for (x in plots_sf$url) {
+      img <- png::readPNG(x)
+      if (dim(img)[3] == 3) {
+        # RGB image, add alpha channel
+        img_alpha <- array(dim = c(dim(img)[1], dim(img)[2], 4))
+        img_alpha[,, 1:3] <- img
+        img_alpha[,, 4] <- 0.5 # Set alpha to 0.5 (50% transparent)
+      } else if (dim(img)[3] == 4) {
+        # Already has alpha, multiply it
+        img_alpha <- img
+        img_alpha[,, 4] <- img[,, 4] * alpha
+      }
+      png::writePNG(img_alpha, x)
+    }
+
     # create link to image
-    plots_sf$link <- link_to_img(plots_sf$url, height, width)
+    plots_sf$link <- link_to_img(plots_sf$url, width, height)
 
     # work out an approximate bounding box for the plot
     bbox <- estimate_bbox(plots_sf)
@@ -588,8 +664,18 @@ create_static_map <-
     # make plot
     plt <-
       ggplot2::ggplot(plots_sf) +
-      ggspatial::annotation_map_tile(zoomin = 0, cachedir = tempdir(), type = provider, progress = "none") +
-      geom_sf_richtext(data = plots_sf, ggplot2::aes(label = .data[["link"]]), fill = NA, color = NA) +
+      ggspatial::annotation_map_tile(
+        zoomin = 0,
+        cachedir = tempdir(),
+        type = provider,
+        progress = "none"
+      ) +
+      geom_sf_richtext(
+        data = plots_sf,
+        ggplot2::aes(label = .data[["link"]]),
+        fill = NA,
+        color = NA
+      ) +
       theme_static() +
       ggplot2::coord_sf(
         xlim = c(bbox$xmin, bbox$xmax),
@@ -597,10 +683,16 @@ create_static_map <-
       ) +
       ggplot2::labs(x = NULL, y = NULL)
 
-    if (length(pollutant) > 1 |
-      !is.null(facet)) {
+    if (
+      length(pollutant) > 1 ||
+        !is.null(facet)
+    ) {
       plt <-
-        plt + ggplot2::facet_wrap(ggplot2::vars(.data[[split_col]]), nrow = facet.nrow) +
+        plt +
+        ggplot2::facet_wrap(
+          ggplot2::vars(.data[[split_col]]),
+          nrow = facet.nrow
+        ) +
         ggplot2::theme(strip.text = ggtext::element_markdown())
     }
 
@@ -612,7 +704,7 @@ create_static_map <-
 #' @noRd
 quick_popup <- function(data, popup, latitude, longitude, control) {
   nice_popup <-
-    stringr::str_replace_all(popup, "\\_|\\.|\\-", " ") %>%
+    stringr::str_replace_all(popup, "\\_|\\.|\\-", " ") |>
     stringr::str_to_title()
 
   names <- stats::setNames(popup, nice_popup)
@@ -629,8 +721,10 @@ quick_popup <- function(data, popup, latitude, longitude, control) {
 #' checks if multiple pollutants have been provided with a "fixed" scale
 #' @noRd
 check_multipoll <- function(vec, pollutant) {
-  if ("fixed" %in% vec & length(pollutant) > 1) {
-    cli::cli_warn("{.code 'fixed'} limits only work with a single given {.field pollutant}")
+  if ("fixed" %in% vec && length(pollutant) > 1) {
+    cli::cli_warn(
+      "{.code 'fixed'} limits only work with a single given {.field pollutant}"
+    )
     "free"
   } else {
     vec
@@ -643,27 +737,31 @@ check_multipoll <- function(vec, pollutant) {
 #' @source https://github.com/wilkelab/ggtext/issues/76#issuecomment-1011166509
 #' @noRd
 geom_sf_richtext <-
-  function(mapping = ggplot2::aes(),
-           data = NULL,
-           stat = "sf_coordinates",
-           position = "identity",
-           ...,
-           parse = FALSE,
-           nudge_x = 0,
-           nudge_y = 0,
-           label.padding = ggplot2::unit(0.25, "lines"),
-           label.r = ggplot2::unit(
-             0.15,
-             "lines"
-           ),
-           label.size = 0.25,
-           na.rm = FALSE,
-           show.legend = NA,
-           inherit.aes = TRUE,
-           fun.geometry = NULL) {
+  function(
+    mapping = ggplot2::aes(),
+    data = NULL,
+    stat = "sf_coordinates",
+    position = "identity",
+    ...,
+    parse = FALSE,
+    nudge_x = 0,
+    nudge_y = 0,
+    label.padding = ggplot2::unit(0.25, "lines"),
+    label.r = ggplot2::unit(
+      0.15,
+      "lines"
+    ),
+    label.size = 0.25,
+    na.rm = FALSE,
+    show.legend = NA,
+    inherit.aes = TRUE,
+    fun.geometry = NULL
+  ) {
     if (!missing(nudge_x) || !missing(nudge_y)) {
       if (!missing(position)) {
-        cli::cli_abort("Specify either {.arg position} or {.arg nudge_x}/{.arg nudge_y}")
+        cli::cli_abort(
+          "Specify either {.arg position} or {.arg nudge_x}/{.arg nudge_y}"
+        )
       }
       position <- ggplot2::position_nudge(nudge_x, nudge_y)
     }
@@ -709,13 +807,15 @@ check_providers <- function(provider, static) {
     if (provider %in% names(providers_dict)) {
       provider <- providers_dict[provider]
     }
-    rlang::arg_match(provider, rosm::osm.types(), multiple = FALSE)
+    rlang::arg_match(provider, unname(providers_dict), multiple = FALSE)
   } else {
     provider <- provider %||% "OpenStreetMap"
     if (any(provider %in% providers_dict)) {
       for (i in seq_along(provider)) {
         if (provider[i] %in% providers_dict) {
-          provider[i] <- unname(names(providers_dict)[providers_dict == provider[i]])
+          provider[i] <- unname(names(providers_dict)[
+            providers_dict == provider[i]
+          ])
         }
       }
     }
@@ -731,10 +831,15 @@ check_legendposition <- function(position, static) {
     settheme <- ggplot2::theme_get()
     setposition <- settheme$legend.position %||% "right"
     position <- position %||% setposition
-    rlang::arg_match(position, c("top", "right", "bottom", "left"), multiple = FALSE)
+    rlang::arg_match(
+      position,
+      c("top", "right", "bottom", "left"),
+      multiple = FALSE
+    )
   } else {
     position <- position %||% "topright"
-    rlang::arg_match(position,
+    rlang::arg_match(
+      position,
       c("topright", "topleft", "bottomright", "bottomleft"),
       multiple = TRUE
     )
@@ -785,10 +890,12 @@ rm_illegal_chars <- function(x) {
 
 #' Create a legend title
 #' @noRd
-create_legend_title <- function(static,
-                                legend.title.autotext,
-                                legend.title,
-                                str) {
+create_legend_title <- function(
+  static,
+  legend.title.autotext,
+  legend.title,
+  str
+) {
   if (legend.title.autotext) {
     textfun <- quickTextHTML
     if (static) {
@@ -803,4 +910,17 @@ create_legend_title <- function(static,
   legend.title <- legend.title %||% str
   legend.title <- textfun(legend.title)
   return(legend.title)
+}
+
+#' Check packages are installed for static mapping
+#' @noRd
+check_installed_static <- function() {
+  rlang::check_installed(c(
+    "ggplot2",
+    "ggspatial",
+    "prettymapr",
+    "ggtext",
+    "png",
+    "rosm"
+  ))
 }

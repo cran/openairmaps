@@ -17,7 +17,8 @@ windroseMap(
   provider = "OpenStreetMap",
   cols = "turbo",
   alpha = 1,
-  key = FALSE,
+  theme = NULL,
+  key.position = "none",
   legend = TRUE,
   legend.position = NULL,
   legend.title = NULL,
@@ -114,8 +115,8 @@ useful for the same reasons as popups, though are typically shorter.}
 
 \emph{default:} \code{"OpenStreetMap"} | \emph{scope:} dynamic & static
 
-The base map(s) to be used beneath the polar markers. If not provided, will
-default to \code{"OpenStreetMap"}/\code{"osm"} for both dynamic and static maps.
+The base map(s) to be used for the map. If not provided, will default to
+\code{"OpenStreetMap"}/\code{"osm"} for both dynamic and static maps.
 \itemize{
 \item \emph{Dynamic}: Any number of \link[leaflet:providers]{leaflet::providers}.
 See \url{http://leaflet-extras.github.io/leaflet-providers/preview/} for a list
@@ -123,7 +124,8 @@ of all base maps that can be used. If multiple base maps are provided, they
 can be toggled between using a "layer control" interface. By default, the
 interface will use the provider names as labels, but users can define their
 own using a named vector (e.g., \code{c("Default" = "OpenStreetMap", "Satellite"   = "Esri.WorldImagery")})
-\item \emph{Static}: One of \code{\link[rosm:deprecated]{rosm::osm.types()}}.
+\item \emph{Static}: One of the options listed in \code{rosm::osm.types()} (for
+example, \code{"osm"}, \code{"cartodark"}, \code{"cartolight"}, etc.).
 }
 
 There is some overlap in static and dynamic providers. For example,
@@ -137,8 +139,7 @@ substitute the correct provider string.}
 
 The colours used for plotting, passed to \code{\link[openair:openColours]{openair::openColours()}}. The
 default, \code{"turbo"}, is a rainbow palette with relatively perceptually
-uniform colours. Read more about this palette at
-\url{https://research.google/blog/turbo-an-improved-rainbow-colormap-for-visualization/}.}
+uniform colours.}
 
 \item{alpha}{\emph{Transparency value for polar markers.}
 
@@ -146,11 +147,23 @@ uniform colours. Read more about this palette at
 
 A value between 0 (fully transparent) and 1 (fully opaque).}
 
-\item{key}{\emph{Draw individual marker legends?}
+\item{theme}{\emph{Custom ggplot2 theme for the polar markers.}
+
+\emph{default:} \code{NULL} | \emph{scope:} dynamic & static
+
+A custom \code{ggplot2} theme to add to the polar markers. This should ideally
+be a partial theme (i.e., \code{\link[ggplot2:theme]{ggplot2::theme()}}) over a complete theme (e.g.,
+\code{\link[ggplot2:ggtheme]{ggplot2::theme_bw()}}) as other arguments like \code{key} interact with the plot
+theme \emph{before} custom themes are set, so would be overriden by a complete
+theme.}
+
+\item{key.position}{\emph{Legend position for individual marker legends.}
 
 \emph{default:} \code{FALSE} | \emph{scope:} dynamic & static
 
-Draw a key for each individual marker? Potentially useful when \code{limits = "free"}, but of limited use otherwise.}
+When \code{key.position} is not \code{"none"}, a key will be drawn for each
+individual marker. Potentially useful when \code{limits = "free"}, but of
+limited use otherwise.}
 
 \item{legend}{\emph{Draw a shared legend?}
 
@@ -264,74 +277,72 @@ angles are 45 and 10. Note that the width of the wind speed interval may
 need adjusting using \code{width}.}
     \item{\code{calm.thresh}}{By default, conditions are considered to be calm when the
 wind speed is zero. The user can set a different threshold for calms be
-setting \code{calm.thresh} to a higher value. For example,
-\code{calm.thresh = 0.5} will identify wind speeds \strong{below} 0.5 as calm.}
+setting \code{calm.thresh} to a higher value. For example, \code{calm.thresh = 0.5}
+will identify wind speeds \strong{below} 0.5 as calm.}
     \item{\code{bias.corr}}{When \code{angle} does not divide exactly into 360 a bias is
 introduced in the frequencies when the wind direction is already supplied
 rounded to the nearest 10 degrees, as is often the case. For example, if
-\code{angle = 22.5}, N, E, S, W will include 3 wind sectors and all other
-angles will be two. A bias correction can made to correct for this problem.
-A simple method according to Applequist (2012) is used to adjust the
+\code{angle = 22.5}, N, E, S, W will include 3 wind sectors and all other angles
+will be two. A bias correction can made to correct for this problem. A
+simple method according to Applequist (2012) is used to adjust the
 frequencies.}
-    \item{\code{grid.line}}{Grid line interval to use. If \code{NULL}, as in default,
-this is assigned based on the available data range. However, it can also be
-forced to a specific value, e.g. \code{grid.line = 10}. \code{grid.line}
-can also be a list to control the interval, line type and colour. For
-example \code{grid.line = list(value = 10, lty = 5, col = "purple")}.}
-    \item{\code{width}}{For \code{paddle = TRUE}, the adjustment factor for width of
-wind speed intervals. For example, \code{width = 1.5} will make the paddle
-width 1.5 times wider.}
-    \item{\code{seg}}{When \code{paddle = TRUE}, \code{seg} determines with width of the
-segments. For example, \code{seg = 0.5} will produce segments 0.5 *
-\code{angle}.}
-    \item{\code{auto.text}}{Either \code{TRUE} (default) or \code{FALSE}. If \code{TRUE}
-titles and axis labels will automatically try and format pollutant names
-and units properly, e.g., by subscripting the \sQuote{2} in NO2.}
-    \item{\code{offset}}{The size of the 'hole' in the middle of the plot, expressed as
-a percentage of the polar axis scale, default 10.}
-    \item{\code{normalise}}{If \code{TRUE} each wind direction segment is normalised to
-equal one. This is useful for showing how the concentrations (or other
+    \item{\code{grid.line}}{Grid line interval to use. If \code{NULL}, as in default, this is
+assigned based on the available data range. However, it can also be forced
+to a specific value, e.g. \code{grid.line = 10}. \code{grid.line} can also be a list
+to control the interval, line type and colour. For example \code{grid.line = list(value = 10, lty = 5, col = "purple")}.}
+    \item{\code{width}}{For paddle = TRUE, the adjustment factor for width of wind speed
+intervals. For example, width = 1.5 will make the paddle width 1.5 times
+wider.}
+    \item{\code{seg}}{\code{seg} determines with width of the segments. For example, \code{seg = 0.5} will produce segments 0.5 * \code{angle}.}
+    \item{\code{auto.text}}{Either \code{TRUE} (default) or \code{FALSE}. If \code{TRUE} titles and
+axis labels will automatically try and format pollutant names and units
+properly, e.g., by subscripting the "2" in "NO2". Passed to \code{\link[openair:quickText]{quickText()}}.}
+    \item{\code{offset}}{\code{offset} controls the size of the 'hole' in the middle and is
+expressed on a scale of \code{0} to \code{100}, where \code{0} is no hole and \code{100} is a
+hole that takes up the entire plotting area.}
+    \item{\code{normalise}}{If \code{TRUE} each wind direction segment is normalised to equal
+one. This is useful for showing how the concentrations (or other
 parameters) contribute to each wind sector when the proportion of time the
 wind is from that direction is low. A line showing the probability that the
 wind directions is from a particular wind sector is also shown.}
     \item{\code{max.freq}}{Controls the scaling used by setting the maximum value for
 the radial limits. This is useful to ensure several plots use the same
 radial limits.}
-    \item{\code{paddle}}{Either \code{TRUE} or \code{FALSE}. If \code{TRUE} plots rose
-using 'paddle' style spokes. If \code{FALSE} plots rose using 'wedge' style
-spokes.}
-    \item{\code{key.header}}{Adds additional text/labels above the scale key. For
-example, passing \code{windRose(mydata, key.header = "ws")} adds the
-addition text as a scale header. Note: This argument is passed to
-\code{\link[openair:drawOpenKey]{drawOpenKey()}} via \code{\link[openair:quickText]{quickText()}}, applying the auto.text argument, to
-handle formatting.}
-    \item{\code{key.footer}}{Adds additional text/labels below the scale key. See
-\code{key.header} for further information.}
-    \item{\code{key.position}}{Location where the scale key is to plotted. Allowed
-arguments currently include \dQuote{top}, \dQuote{right}, \dQuote{bottom}
-and \dQuote{left}.}
+    \item{\code{paddle}}{Either \code{TRUE} or \code{FALSE}. If \code{TRUE} plots rose using 'paddle'
+style spokes. If \code{FALSE} plots rose using 'wedge' style spokes.}
+    \item{\code{key.title}}{Used to set the title of the legend. The legend title is
+passed to \code{\link[openair:quickText]{quickText()}} if \code{auto.text = TRUE}.}
+    \item{\code{strip.position}}{Location where the facet 'strips' are located when
+using \code{type}. When one \code{type} is provided, can be one of \code{"left"},
+\code{"right"}, \code{"bottom"} or \code{"top"}. When two \code{type}s are provided, this
+argument defines whether the strips are "switched" and can take either
+\code{"x"}, \code{"y"}, or \code{"both"}. For example, \code{"x"} will switch the 'top' strip
+locations to the bottom of the plot.}
     \item{\code{dig.lab}}{The number of significant figures at which scientific number
 formatting is used in break point and key labelling. Default 5.}
-    \item{\code{include.lowest}}{Logical. If \code{FALSE} (the default), the first
-interval will be left exclusive and right inclusive. If \code{TRUE}, the
-first interval will be left and right inclusive. Passed to the
-\code{include.lowest} argument of \code{\link[=cut]{cut()}}.}
-    \item{\code{statistic}}{The \code{statistic} to be applied to each data bin in the
-plot. Options currently include \dQuote{prop.count}, \dQuote{prop.mean} and
+    \item{\code{include.lowest}}{Logical. If \code{FALSE} (the default), the first interval
+will be left exclusive and right inclusive. If \code{TRUE}, the first interval
+will be left and right inclusive. Passed to the \code{include.lowest} argument
+of \code{\link[=cut]{cut()}}.}
+    \item{\code{statistic}}{The \code{statistic} to be applied to each data bin in the plot.
+Options currently include \dQuote{prop.count}, \dQuote{prop.mean} and
 \dQuote{abs.count}. The default \dQuote{prop.count} sizes bins according to
 the proportion of the frequency of measurements.  Similarly,
 \dQuote{prop.mean} sizes bins according to their relative contribution to
 the mean. \dQuote{abs.count} provides the absolute count of measurements in
 each bin.}
     \item{\code{pollutant}}{Alternative data series to be sampled instead of wind speed.
-The \code{\link[openair:windRose]{windRose()}} default NULL is equivalent to \code{pollutant = "ws"}. Use
-in \code{\link[openair:pollutionRose]{pollutionRose()}}.}
-    \item{\code{angle.scale}}{The scale is by default shown at a 315 degree angle.
-Sometimes the placement of the scale may interfere with an interesting
-feature. The user can therefore set \code{angle.scale} to another value
-(between 0 and 360 degrees) to mitigate such problems. For example
-\code{angle.scale = 45} will draw the scale heading in a NE direction.}
+The \code{\link[openair:windRose]{windRose()}} default NULL is equivalent to \code{pollutant = "ws"}. Use in
+\code{\link[openair:pollutionRose]{pollutionRose()}}.}
+    \item{\code{angle.scale}}{In radial plots (e.g., \code{\link[openair:polarPlot]{polarPlot()}}), the radial scale is
+drawn directly on the plot itself. While suitable defaults have been
+chosen, sometimes the placement of the scale may interfere with an
+interesting feature. \code{angle.scale} can take any value between \code{0} and \code{360}
+to place the scale at a different angle, or \code{FALSE} to move it to the side
+of the plots.}
     \item{\code{border}}{Border colour for shaded areas. Default is no border.}
+    \item{\code{key}}{Deprecated; please use \code{key.position}. If \code{FALSE}, sets
+\code{key.position} to \code{"none"}.}
   }}
 
 \item{control}{\strong{Deprecated.} Please use \code{type}.}
@@ -350,25 +361,49 @@ default, these maps are dynamic and can be panned, zoomed, and otherwise
 interacted with. Using the \code{static} argument allows for static images to be
 produced instead.
 }
+\section{Parallel processing with mirai}{
+
+
+Creating a directional analysis map can take a lot of time; each polar
+marker needs to be plot individually, and many of these require some
+expensive computations. \code{openairmaps} supports parallel processing with
+\code{{mirai}} to speed these computations up. Users may create workers by
+running \code{\link[mirai:daemons]{mirai::daemons()}} in their R session.
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{mirai::daemons(4)
+polarMap(polar_data, "no2")
+}\if{html}{\out{</div>}}
+
+Typically, spawning one fewer daemons than your number of available cores
+is a useful rule of thumb. Parallel processing will be most useful for the
+most computationally intensive plotting functions - i.e., \code{\link[=polarMap]{polarMap()}} and
+\code{\link[=annulusMap]{annulusMap()}}.
+}
+
 \section{Customisation of static maps using ggplot2}{
 
 
-As the outputs of the static directional analysis functions are \code{ggplot2}
-figures, further customisation is possible using functions such as
-\code{\link[ggplot2:theme]{ggplot2::theme()}}, \code{\link[ggplot2:guides]{ggplot2::guides()}} and \code{\link[ggplot2:labs]{ggplot2::labs()}}.
+As all static plots functions are \code{ggplot2} figures, further customisation
+is possible using functions such as \code{\link[ggplot2:theme]{ggplot2::theme()}}, \code{\link[ggplot2:guides]{ggplot2::guides()}}
+and \code{\link[ggplot2:labs]{ggplot2::labs()}}.
 
-If multiple pollutants are specified, subscripting (e.g., the "x" in "NOx")
-is achieved using the \link[ggtext:ggtext]{ggtext} package. Therefore if you
-choose to override the plot theme, it is recommended to use
-\verb{[ggplot2::theme()]} and \verb{[ggtext::element_markdown()]} to define the
-\code{strip.text} parameter.
+Subscripting pollutants (e.g., the "x" in "NOx") is achieved using the
+\link[ggtext:ggtext]{ggtext} package. Therefore if you choose to override the
+plot theme, it is recommended to use \verb{[ggplot2::theme()]} and
+\verb{[ggtext::element_markdown()]} to define the \code{strip.text} parameter.
 
-When arguments like \code{limits}, \code{percentile} or \code{breaks} are defined, a
-legend is automatically added to the figure. Legends can be removed using
-\code{ggplot2::theme(legend.position = "none")}, or further customised using
-\code{\link[ggplot2:guides]{ggplot2::guides()}} and either \code{color = ggplot2::guide_colourbar()} for
-continuous legends or \code{fill = ggplot2::guide_legend()} for discrete
-legends.
+Legends can be removed using \code{ggplot2::theme(legend.position = "none")}, or
+further customised using \code{\link[ggplot2:guides]{ggplot2::guides()}} and either \code{color = ggplot2::guide_colourbar()} for continuous legends or \code{color = ggplot2::guide_legend()} for discrete legends.
+
+The extent of a map can be adjusted using the \code{xlim} and \code{ylim} arguments
+of \code{\link[ggplot2:ggsf]{ggplot2::coord_sf()}}.
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{polarMap(polar_data, "no2", static = TRUE) +
+    ggplot2::coord_sf(
+        xlim = c(-0.3, 0.2),
+        ylim = c(51.2, 51.8)
+    )
+}\if{html}{\out{</div>}}
 }
 
 \examples{

@@ -20,9 +20,11 @@ addPolarMarkers(
   options = leaflet::markerOptions(),
   clusterOptions = NULL,
   clusterId = NULL,
-  key = FALSE,
+  theme = NULL,
+  key.position = "none",
   d.icon = 200,
   d.fig = 3.5,
+  alpha = 1,
   data = leaflet::getMapData(map),
   ...
 )
@@ -43,14 +45,16 @@ addPolarDiffMarkers(
   options = leaflet::markerOptions(),
   clusterOptions = NULL,
   clusterId = NULL,
-  key = FALSE,
+  theme = NULL,
+  key.position = "none",
   d.icon = 200,
   d.fig = 3.5,
+  alpha = 1,
   ...
 )
 }
 \arguments{
-\item{map}{a map widget object created from \code{\link[leaflet]{leaflet}()}}
+\item{map}{a map widget object created from \code{\link[leaflet:leaflet]{leaflet()}}}
 
 \item{pollutant}{The name of the pollutant to be plot. Note that, if \code{fun = openair::windRose}, you must set \code{pollutant = "ws"}.}
 
@@ -68,18 +72,18 @@ functions include \code{\link[openair:polarPlot]{openair::polarPlot()}} (the def
 \item{layerId}{the layer id}
 
 \item{group}{the name of the group the newly created layers should belong to
-(for \code{\link[leaflet]{clearGroup}} and \code{\link[leaflet]{addLayersControl}} purposes).
+(for \code{\link[leaflet:clearGroup]{clearGroup()}} and \code{\link[leaflet:addLayersControl]{addLayersControl()}} purposes).
 Human-friendly group names are permitted--they need not be short,
 identifier-style names. Any number of layers and even different types of
-layers (e.g. markers and polygons) can share the same group name.}
+layers (e.g., markers and polygons) can share the same group name.}
 
 \item{popup}{A column of \code{data} to be used as a popup.}
 
-\item{popupOptions}{A Vector of \code{\link[leaflet]{popupOptions}} to provide popups}
+\item{popupOptions}{A Vector of \code{\link[leaflet:popupOptions]{popupOptions()}} to provide popups}
 
 \item{label}{A column of \code{data} to be used as a label.}
 
-\item{labelOptions}{A Vector of \code{\link[leaflet]{labelOptions}} to provide label
+\item{labelOptions}{A Vector of \code{\link[leaflet:labelOptions]{labelOptions()}} to provide label
 options for each label. Default \code{NULL}}
 
 \item{options}{a list of extra options for tile layers, popups, paths
@@ -87,12 +91,15 @@ options for each label. Default \code{NULL}}
 
 \item{clusterOptions}{if not \code{NULL}, markers will be clustered using
 \href{https://github.com/Leaflet/Leaflet.markercluster}{Leaflet.markercluster};
- you can use \code{\link[leaflet]{markerClusterOptions}()} to specify marker cluster
+you can use \code{\link[leaflet:markerClusterOptions]{markerClusterOptions()}} to specify marker cluster
 options}
 
 \item{clusterId}{the id for the marker cluster layer}
 
-\item{key}{Should a key for each marker be drawn? Default is \code{FALSE}.}
+\item{theme}{Optional \code{\link[ggplot2:theme]{ggplot2::theme()}} elements to add to the polar marker
+before it is saved.}
+
+\item{key.position}{Passed to \code{key.position} for the relevant \code{fun}.}
 
 \item{d.icon}{The diameter of the plot on the map in pixels. This will affect
 the size of the individual polar markers. Alternatively, a vector in the
@@ -103,6 +110,9 @@ desired.}
 inches. This will affect the resolution of the markers on the map.
 Alternatively, a vector in the form \code{c(width, height)} can be provided if a
 non-circular marker is desired.}
+
+\item{alpha}{The desired opacity of the polar markers. Can also be set via
+\code{options} but is provided here for convenience.}
 
 \item{data}{A data frame. The data frame must contain the data to plot your
 choice of openair directional analysis plot, which includes wind speed
@@ -143,24 +153,23 @@ library(leaflet)
 library(openair)
 
 # different types of polar plot on one map
-leaflet(data = polar_data) \%>\%
-  addTiles() \%>\%
-  addPolarMarkers("ws",
+leaflet(data = polar_data) |>
+  addTiles() |>
+  addPolarMarkers(
+    "ws",
     fun = openair::windRose,
+    annotate = FALSE,
     group = "Wind Rose"
-  ) \%>\%
-  addPolarMarkers("nox",
-    fun = openair::polarPlot,
-    group = "Polar Plot"
-  ) \%>\%
+  ) |>
+  addPolarMarkers("nox", fun = openair::polarPlot, group = "Polar Plot") |>
   addLayersControl(
     baseGroups = c("Wind Rose", "Polar Plot")
   )
 
 # use of polar diff (NB: both 'before' and 'after' inherit from `leaflet()`,
 # so at least one should be overridden - in this case 'after')
-leaflet(data = polar_data) \%>\%
-  addTiles() \%>\%
+leaflet(data = polar_data) |>
+  addTiles() |>
   addPolarDiffMarkers("nox",
     after = dplyr::mutate(polar_data, nox = jitter(nox, 5))
   )

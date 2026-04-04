@@ -74,16 +74,18 @@
 #' searchNetwork(lat = palace$lat, lng = palace$lng, max_dist = 20, year = 2020)
 #' }
 searchNetwork <-
-  function(lat,
-           lng,
-           source = "aurn",
-           year = NULL,
-           site_type = NULL,
-           variable = NULL,
-           max_dist = NULL,
-           n = NULL,
-           crs = 4326,
-           map = TRUE) {
+  function(
+    lat,
+    lng,
+    source = "aurn",
+    year = NULL,
+    site_type = NULL,
+    variable = NULL,
+    max_dist = NULL,
+    n = NULL,
+    crs = 4326,
+    map = TRUE
+  ) {
     # swap NULL to NA - to pass to openair
     if (is.null(year)) {
       year <- NA
@@ -94,19 +96,20 @@ searchNetwork <-
         source = source,
         all = TRUE,
         year = year
-      ) %>%
+      ) |>
       sf::st_as_sf(
         coords = c("longitude", "latitude"),
-        crs = 4326, remove = FALSE
+        crs = 4326,
+        remove = FALSE
       )
 
     # get target SF object
     target <-
-      dplyr::tibble(latitude = lat, longitude = lng) %>%
+      dplyr::tibble(latitude = lat, longitude = lng) |>
       sf::st_as_sf(
         coords = c("longitude", "latitude"),
         crs = crs
-      ) %>%
+      ) |>
       sf::st_transform(crs = 4326)
 
     # filter for site_type
@@ -151,18 +154,15 @@ searchNetwork <-
     # filter for n
     if (!is.null(n)) {
       meta <-
-        dplyr::arrange(meta, .data$dist) %>%
+        dplyr::arrange(meta, .data$dist) |>
         dplyr::slice_head(n = n)
     }
 
     pal <-
-      leaflet::colorNumeric("viridis",
-        reverse = TRUE,
-        c(0, meta$dist)
-      )
+      leaflet::colorNumeric("viridis", reverse = TRUE, c(0, meta$dist))
 
     leafmap <-
-      leaflet::leaflet() %>%
+      leaflet::leaflet() |>
       leaflet::addProviderTiles("CartoDB.Positron")
 
     if (!is.null(max_dist)) {
@@ -177,27 +177,31 @@ searchNetwork <-
     }
 
     # construct html tooltip
-    html <- stringr::str_glue("Showing <b>{nrow(meta)}</b> sites.<details><summary>View Constraints</summary><ul>")
+    html <- stringr::str_glue(
+      "Showing <b>{nrow(meta)}</b> sites.<details><summary>View Constraints</summary><ul>"
+    )
     vars <- stringr::str_c(source, collapse = ", ")
     html <- stringr::str_glue("{html}<li><b>Source(s):</b> {vars}</li>")
 
-    if (all(!is.na(year))) {
+    if (!anyNA(year)) {
       vars <- stringr::str_glue("{min(year)} - {max(year)}")
       html <- stringr::str_glue("{html}<li><b>Year(s):</b> {vars}</li>")
     }
 
     if (!is.null(variable)) {
-      vars <- stringr::str_c(variable, collapse = ", ") %>% quickTextHTML()
+      vars <- stringr::str_c(variable, collapse = ", ") |> quickTextHTML()
       html <- stringr::str_glue("{html}<li><b>Variables:</b> {vars}</li>")
     }
 
     if (!is.null(site_type)) {
-      vars <- stringr::str_c(site_type, collapse = ", ") %>% quickTextHTML()
+      vars <- stringr::str_c(site_type, collapse = ", ") |> quickTextHTML()
       html <- stringr::str_glue("{html}<li><b>Site Type(s):</b> {vars}</li>")
     }
 
     if (!is.null(max_dist)) {
-      html <- stringr::str_glue("{html}<li><b>Maximum Dist:</b> {as.character(max_dist)} km</li>")
+      html <- stringr::str_glue(
+        "{html}<li><b>Maximum Dist:</b> {as.character(max_dist)} km</li>"
+      )
     }
 
     if (!is.null(n)) {
@@ -209,7 +213,7 @@ searchNetwork <-
     html <- stringr::str_wrap(html, 20)
 
     leafmap <-
-      leafmap %>%
+      leafmap |>
       leaflet::addCircleMarkers(
         data = meta,
         radius = 6,
@@ -225,29 +229,31 @@ searchNetwork <-
       <b>Network:</b> {toupper(meta$source)}<br>
       <b>Site Type:</b> {meta$site_type}"
         )
-      ) %>%
+      ) |>
       leaflet::addMarkers(
         data = target,
         label = "Target",
-        popup = stringr::str_glue("<b><u>TARGET</u></b><br> <b>Latitude:</b> {sf::st_coordinates(target$geometry)[1,'Y']}<br> <b>Longitude:</b> {sf::st_coordinates(target$geometry)[1,'X']}")
-      ) %>%
+        popup = stringr::str_glue(
+          "<b><u>TARGET</u></b><br> <b>Latitude:</b> {sf::st_coordinates(target$geometry)[1,'Y']}<br> <b>Longitude:</b> {sf::st_coordinates(target$geometry)[1,'X']}"
+        )
+      ) |>
       leaflet::addControl(
         position = "bottomright",
         html = html
-      ) %>%
+      ) |>
       leaflet::addLegend(
         pal = pal,
         values = c(0, meta$dist),
         title = "Distance<br>from marker<br>(km)"
-      ) %>%
+      ) |>
       leaflet::addScaleBar(position = "bottomleft")
 
     if (map) {
       return(leafmap)
     } else {
       meta <-
-        meta %>%
-        dplyr::tibble() %>%
+        meta |>
+        dplyr::tibble() |>
         dplyr::select(-"geometry")
 
       return(meta)

@@ -7,24 +7,50 @@
 #' interacted with. Using the `static` argument allows for static images to be
 #' produced instead.
 #'
+#' @section Parallel processing with mirai:
+#'
+#'   Creating a directional analysis map can take a lot of time; each polar
+#'   marker needs to be plot individually, and many of these require some
+#'   expensive computations. `openairmaps` supports parallel processing with
+#'   `{mirai}` to speed these computations up. Users may create workers by
+#'   running [mirai::daemons()] in their R session.
+#'
+#'   ```
+#'   mirai::daemons(4)
+#'   polarMap(polar_data, "no2")
+#'   ```
+#'
+#'   Typically, spawning one fewer daemons than your number of available cores
+#'   is a useful rule of thumb. Parallel processing will be most useful for the
+#'   most computationally intensive plotting functions - i.e., [polarMap()] and
+#'   [annulusMap()].
+#'
 #' @section Customisation of static maps using ggplot2:
 #'
-#'   As the outputs of the static directional analysis functions are `ggplot2`
-#'   figures, further customisation is possible using functions such as
-#'   [ggplot2::theme()], [ggplot2::guides()] and [ggplot2::labs()].
+#'   As all static plots functions are `ggplot2` figures, further customisation
+#'   is possible using functions such as [ggplot2::theme()], [ggplot2::guides()]
+#'   and [ggplot2::labs()].
 #'
-#'   If multiple pollutants are specified, subscripting (e.g., the "x" in "NOx")
-#'   is achieved using the [ggtext][ggtext::ggtext] package. Therefore if you
-#'   choose to override the plot theme, it is recommended to use
-#'   `[ggplot2::theme()]` and `[ggtext::element_markdown()]` to define the
-#'   `strip.text` parameter.
+#'   Subscripting pollutants (e.g., the "x" in "NOx") is achieved using the
+#'   [ggtext][ggtext::ggtext] package. Therefore if you choose to override the
+#'   plot theme, it is recommended to use `[ggplot2::theme()]` and
+#'   `[ggtext::element_markdown()]` to define the `strip.text` parameter.
 #'
-#'   When arguments like `limits`, `percentile` or `breaks` are defined, a
-#'   legend is automatically added to the figure. Legends can be removed using
-#'   `ggplot2::theme(legend.position = "none")`, or further customised using
-#'   [ggplot2::guides()] and either `color = ggplot2::guide_colourbar()` for
-#'   continuous legends or `fill = ggplot2::guide_legend()` for discrete
-#'   legends.
+#'   Legends can be removed using `ggplot2::theme(legend.position = "none")`, or
+#'   further customised using [ggplot2::guides()] and either `color =
+#'   ggplot2::guide_colourbar()` for continuous legends or `color =
+#'   ggplot2::guide_legend()` for discrete legends.
+#'
+#'   The extent of a map can be adjusted using the `xlim` and `ylim` arguments
+#'   of [ggplot2::coord_sf()].
+#'
+#'   ```
+#'   polarMap(polar_data, "no2", static = TRUE) +
+#'       ggplot2::coord_sf(
+#'           xlim = c(-0.3, 0.2),
+#'           ylim = c(51.2, 51.8)
+#'       )
+#'   ```
 #'
 #' @family directional analysis maps
 #'
@@ -138,8 +164,8 @@
 #'
 #'  *default:* `"OpenStreetMap"` | *scope:* dynamic & static
 #'
-#'   The base map(s) to be used beneath the polar markers. If not provided, will
-#'   default to `"OpenStreetMap"`/`"osm"` for both dynamic and static maps.
+#'   The base map(s) to be used for the map. If not provided, will default to
+#'   `"OpenStreetMap"`/`"osm"` for both dynamic and static maps.
 #'
 #'   - *Dynamic*: Any number of [leaflet::providers].
 #'   See <http://leaflet-extras.github.io/leaflet-providers/preview/> for a list
@@ -149,7 +175,8 @@
 #'   own using a named vector (e.g., `c("Default" = "OpenStreetMap", "Satellite"
 #'   = "Esri.WorldImagery")`)
 #'
-#'  - *Static*: One of [rosm::osm.types()].
+#'  - *Static*: One of the options listed in `rosm::osm.types()` (for
+#'   example, `"osm"`, `"cartodark"`, `"cartolight"`, etc.).
 #'
 #'   There is some overlap in static and dynamic providers. For example,
 #'   `{ggspatial}` uses "osm" to specify "OpenStreetMap". When static providers
@@ -162,8 +189,7 @@
 #'
 #'   The colours used for plotting, passed to [openair::openColours()]. The
 #'   default, `"turbo"`, is a rainbow palette with relatively perceptually
-#'   uniform colours. Read more about this palette at
-#'   <https://research.google/blog/turbo-an-improved-rainbow-colormap-for-visualization/>.
+#'   uniform colours.
 #'
 #' @param alpha *Transparency value for polar markers.*
 #'
@@ -171,12 +197,23 @@
 #'
 #'   A value between 0 (fully transparent) and 1 (fully opaque).
 #'
-#' @param key *Draw individual marker legends?*
+#' @param theme *Custom ggplot2 theme for the polar markers.*
+#'
+#'  *default:* `NULL` | *scope:* dynamic & static
+#'
+#'   A custom `ggplot2` theme to add to the polar markers. This should ideally
+#'   be a partial theme (i.e., [ggplot2::theme()]) over a complete theme (e.g.,
+#'   [ggplot2::theme_bw()]) as other arguments like `key` interact with the plot
+#'   theme *before* custom themes are set, so would be overriden by a complete
+#'   theme.
+#'
+#' @param key.position *Legend position for individual marker legends.*
 #'
 #'  *default:* `FALSE` | *scope:* dynamic & static
 #'
-#'   Draw a key for each individual marker? Potentially useful when `limits =
-#'   "free"`, but of limited use otherwise.
+#'   When `key.position` is not `"none"`, a key will be drawn for each
+#'   individual marker. Potentially useful when `limits = "free"`, but of
+#'   limited use otherwise.
 #'
 #' @param legend *Draw a shared legend?*
 #'
@@ -280,7 +317,7 @@
 #' @param control **Deprecated.** Please use `type`.
 #'
 #' @inheritDotParams openair::polarPlot -mydata -pollutant -x -limits -type
-#'   -cols -key -alpha -plot
+#'   -cols -key.position -plot
 #'
 #' @returns Either:
 #'
@@ -299,42 +336,50 @@
 #'   provider = "CartoDB.Voyager"
 #' )
 #' }
-polarMap <- function(data,
-                     pollutant = NULL,
-                     x = "ws",
-                     limits = "free",
-                     upper = "fixed",
-                     latitude = NULL,
-                     longitude = NULL,
-                     crs = 4326,
-                     type = NULL,
-                     popup = NULL,
-                     label = NULL,
-                     provider = "OpenStreetMap",
-                     cols = "turbo",
-                     alpha = 1,
-                     key = FALSE,
-                     legend = TRUE,
-                     legend.position = NULL,
-                     legend.title = NULL,
-                     legend.title.autotext = TRUE,
-                     control.collapsed = FALSE,
-                     control.position = "topright",
-                     control.autotext = TRUE,
-                     d.icon = 200,
-                     d.fig = 3.5,
-                     static = FALSE,
-                     static.nrow = NULL,
-                     progress = TRUE,
-                     ...,
-                     control = NULL) {
+polarMap <- function(
+  data,
+  pollutant = NULL,
+  x = "ws",
+  limits = "free",
+  upper = "fixed",
+  latitude = NULL,
+  longitude = NULL,
+  crs = 4326,
+  type = NULL,
+  popup = NULL,
+  label = NULL,
+  provider = "OpenStreetMap",
+  cols = "turbo",
+  alpha = 1,
+  theme = NULL,
+  key.position = "none",
+  legend = TRUE,
+  legend.position = NULL,
+  legend.title = NULL,
+  legend.title.autotext = TRUE,
+  control.collapsed = FALSE,
+  control.position = "topright",
+  control.autotext = TRUE,
+  d.icon = 200,
+  d.fig = 3.5,
+  static = FALSE,
+  static.nrow = NULL,
+  progress = TRUE,
+  ...,
+  control = NULL
+) {
+  if (static) {
+    check_installed_static()
+  }
   # list pairwise statistics
-  pairwise_stats <- c("r",
-                      "Pearson",
-                      "Spearman",
-                      "robust_slope",
-                      "quantile.slope",
-                      "york_slope")
+  pairwise_stats <- c(
+    "r",
+    "Pearson",
+    "Spearman",
+    "robust_slope",
+    "quantile.slope",
+    "york_slope"
+  )
   dots <- rlang::list2(...)
   pairwise_flag <- FALSE
   if ("statistic" %in% names(dots)) {
@@ -455,26 +500,37 @@ polarMap <- function(data,
   } else {
     funpoll <- "conc"
   }
-  fun <- function(data) {
-    openair::polarPlot(
-      data,
+
+  # arguments for function
+  fun_args <- append(
+    list(
       pollutant = funpoll,
       x = x,
       plot = FALSE,
       limits = theLimits,
       upper = upper,
       cols = cols,
-      alpha = alpha,
-      key = key,
-      ...,
-      par.settings = list(axis.line = list(col = "transparent"))
-    )$plot
+      key.position = key.position
+    ),
+    rlang::list2(...)
+  )
+
+  # define function
+  fun <- function(data) {
+    rlang::exec(
+      openair::polarPlot,
+      !!!append(
+        list(mydata = data),
+        fun_args
+      )
+    )
   }
 
   # plot and save static markers
   plots_df <-
     create_polar_markers(
       fun = fun,
+      fun_args = fun_args,
       data = data,
       latitude = latitude,
       longitude = longitude,
@@ -483,6 +539,7 @@ polarMap <- function(data,
       popup = popup,
       label = label,
       dropcol = funpoll,
+      theme = theme,
       progress = progress
     )
 
@@ -501,11 +558,12 @@ polarMap <- function(data,
         split_col,
         control.collapsed,
         control.position,
-        control.autotext
+        control.autotext,
+        alpha
       )
 
     # add legend if limits are set
-    if (!all(is.na(theLimits)) & legend) {
+    if (!all(is.na(theLimits)) && legend) {
       legend.title <-
         create_legend_title(
           static = static,
@@ -517,6 +575,7 @@ polarMap <- function(data,
       map <-
         leaflet::addLegend(
           map,
+          opacity = alpha,
           title = legend.title,
           pal = leaflet::colorNumeric(
             palette = openair::openColours(scheme = cols),
@@ -540,10 +599,11 @@ polarMap <- function(data,
         facet.nrow = static.nrow,
         d.icon = d.icon,
         crs = crs,
-        provider = provider
+        provider = provider,
+        alpha = alpha
       )
 
-    if (!all(is.na(theLimits)) & legend) {
+    if (!all(is.na(theLimits)) && legend) {
       legend.title <-
         create_legend_title(
           static = static,

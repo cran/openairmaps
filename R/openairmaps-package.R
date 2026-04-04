@@ -32,17 +32,17 @@
 #' @seealso The `openair` package, from which `openairmaps` is based.
 #' @seealso The `worldmet` package, which simplifies the access of
 #'   meteorological data in R.
-#' @seealso The [openair book](https://bookdown.org/david_carslaw/openair/) for
+#' @seealso The [openair book](https://openair-project.github.io/book/) for
 #'   more in-depth documentation of `openair` and `openairmaps`.
 #'
 #' @keywords internal
 "_PACKAGE"
 
 ## usethis namespace: start
+#' @importFrom dplyr tibble
 #' @importFrom lifecycle deprecated
-#' @importFrom prettymapr makebbox
 #' @importFrom rlang %||%
 #' @importFrom rlang .data
-#' @importFrom tibble tibble
+#' @importFrom rlang :=
 ## usethis namespace: end
 NULL

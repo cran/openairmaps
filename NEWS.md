@@ -1,3 +1,47 @@
+# openairmaps 0.10.0
+
+## Breaking Changes
+
+* `{openairmaps}` now depends on a minimum R version of 4.1.0 and no longer exports the `{magrittr}` pipe (`%>%`). Users are encouraged to use the base R pipe (`|>`) instead. In most cases, this is a drop-in replacement.
+
+* `{openairmaps}` now requires a a minimum `{openair}` version of 3.0.0. Polar markers are therefore now produced using `ggplot2`. This has allowed the `theme` argument to be added to the `polarMap()` family, which allows for extensive customisation of polar markers. This has included the following changes:
+
+    * `key` has been replaced with `key.position`, in line with deprecations in `{openair}`.
+    
+    * Polar markers will inherit any styling set using `ggplot2::theme_set()`. This may be unfavourable, but can be partially overriden using the new `theme` argument.
+
+* The `polarMapStatic()` family have been removed. The `trajMapStatic()` family are still exported but have been deprecated.
+
+## New features
+
+* The `polarMap()` gains the `theme` argument for customising the `ggplot2` theme of the markers.
+
+* Added a new 'spatial interpolation' family of functions, which rely on the suggested `{stars}`, `{terra}` and `{gstat}` packages. These functions are most useful for dense air quality networks, and can be useful for identifying spatial patterns and hotspots of air pollution.
+
+    * `krigingMap()` allows for smooth spatial interpolation, either using simple inverse distance weighting or full point kriging.
+    
+    * `voronoiMap()` uses `terra::voronoi` to create a polygonal map of 'closest observations'.
+
+* Polar marker functions (both the `polarMap()` family and `addPolarMarkers()`) can now be run asynchronously if the user sets `mirai::daemons()`. Internally, this uses `purrr::in_parallel()`.
+
+* The progress bar shown when `progress = TRUE` now better reflects the actual time until function completion.
+
+* `networkMap()` can now use `source = 'imperial'`, in line with updates to `{openair}`.
+
+## Refactoring
+
+This release includes several changes to make `{openairmaps}` more lightweight.
+
+* `{ggspatial}`, `{prettymapr}` and `{ggtext}`, the packages which support static mapping, have been moved to `Suggests` from `Imports`. This gives the package a smaller size for users who only use `{openairmaps}` for interactive mapping. On first trying to use a static mapping function, users will be prompted to install these packages.
+
+* `{mgcv}` has been moved to `Suggests` as it is only used in one place (`trajLevelMap(smooth = TRUE)`)
+
+* `convertPostcode()` now uses `{curl}` over `{httr}`.
+
+* Removed dependency on `{forcats}`.
+
+* Removed suggested dependency on `{worldmet}`.
+
 # openairmaps 0.9.1
 
 ## New features
@@ -177,7 +221,7 @@ This is a patch release primarily to fix a few bugs in `{openairmaps}`, and impl
 
 ## New features
 
-* Functions now use Google's "turbo" colour palette rather than "jet" by default. More about this palette and the advantages of using it over "jet" can be read at <https://ai.googleblog.com/2019/08/turbo-improved-rainbow-colormap-for.html>.
+* Functions now use the `"turbo"` colour palette rather than `"jet"` by default, which is still a rainbow palette but with more perceptually uniform colours.
 
 ## Bug fixes
 

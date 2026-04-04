@@ -10,10 +10,16 @@ buildPopup(
   latitude = NULL,
   longitude = NULL,
   type = NULL,
-  fun.character = function(x) paste(unique(x), collapse = ", "),
-  fun.numeric = function(x) signif(mean(x, na.rm = TRUE), 3),
-  fun.dttm = function(x) paste(lubridate::floor_date(range(x, na.rm = TRUE), "day"),
-    collapse = " to "),
+  fun.character = function(x) {
+     paste(unique(x), collapse = ", ")
+ },
+  fun.numeric = function(x) {
+     signif(mean(x, na.rm = TRUE), 3)
+ },
+  fun.dttm = function(x) {
+     paste(lubridate::floor_date(range(x, na.rm = TRUE),
+    "day"), collapse = " to ")
+ },
   ...
 )
 }
@@ -77,7 +83,7 @@ could be the start or end of the dates.}
 \item{...}{\strong{Not currently used.}}
 }
 \value{
-a \code{\link[tibble:tibble]{tibble::tibble()}}
+a \link[tibble:tibble]{tibble}
 }
 \description{
 Group a dataframe together by latitude/longitude columns and create a HTML
@@ -96,7 +102,7 @@ buildPopup(
     "Site Type" = "site_type",
     "Date Range" = "date"
   )
-) \%>\%
+) |>
   polarMap("nox", popup = "popup")
 }
 }

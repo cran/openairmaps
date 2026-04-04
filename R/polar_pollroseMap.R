@@ -6,6 +6,7 @@
 #' maps are dynamic and can be panned, zoomed, and otherwise interacted with.
 #' Using the `static` argument allows for static images to be produced instead.
 #'
+#' @inheritSection polarMap Parallel processing with mirai
 #' @inheritSection polarMap Customisation of static maps using ggplot2
 #' @family directional analysis maps
 #'
@@ -48,34 +49,41 @@
 #'   provider = "CartoDB.Voyager"
 #' )
 #' }
-pollroseMap <- function(data,
-                        pollutant = NULL,
-                        statistic = "prop.count",
-                        breaks = NULL,
-                        latitude = NULL,
-                        longitude = NULL,
-                        crs = 4326,
-                        type = NULL,
-                        popup = NULL,
-                        label = NULL,
-                        provider = "OpenStreetMap",
-                        cols = "turbo",
-                        alpha = 1,
-                        key = FALSE,
-                        legend = TRUE,
-                        legend.position = NULL,
-                        legend.title = NULL,
-                        legend.title.autotext = TRUE,
-                        control.collapsed = FALSE,
-                        control.position = "topright",
-                        control.autotext = TRUE,
-                        d.icon = 200,
-                        d.fig = 3.5,
-                        static = FALSE,
-                        static.nrow = NULL,
-                        progress = TRUE,
-                        ...,
-                        control = NULL) {
+pollroseMap <- function(
+  data,
+  pollutant = NULL,
+  statistic = "prop.count",
+  breaks = NULL,
+  latitude = NULL,
+  longitude = NULL,
+  crs = 4326,
+  type = NULL,
+  popup = NULL,
+  label = NULL,
+  provider = "OpenStreetMap",
+  cols = "turbo",
+  alpha = 1,
+  theme = NULL,
+  key.position = "none",
+  legend = TRUE,
+  legend.position = NULL,
+  legend.title = NULL,
+  legend.title.autotext = TRUE,
+  control.collapsed = FALSE,
+  control.position = "topright",
+  control.autotext = TRUE,
+  d.icon = 200,
+  d.fig = 3.5,
+  static = FALSE,
+  static.nrow = NULL,
+  progress = TRUE,
+  ...,
+  control = NULL
+) {
+  if (static) {
+    check_installed_static()
+  }
+
   # check basemap providers are valid
   provider <- check_providers(provider, static)
   legend.position <- check_legendposition(legend.position, static)
@@ -141,20 +149,28 @@ pollroseMap <- function(data,
     split_col <- "pollutant_name"
   }
 
-  # define function
-  fun <- function(data) {
-    openair::pollutionRose(
-      data,
+  # arguments for function
+  fun_args <- append(
+    list(
       pollutant = "conc",
       statistic = statistic,
       breaks = theBreaks,
       plot = FALSE,
       cols = cols,
-      alpha = alpha,
-      key = key,
-      annotate = FALSE,
-      ...,
-      par.settings = list(axis.line = list(col = "transparent"))
+      key.position = key.position,
+      annotate = FALSE
+    ),
+    rlang::list2(...)
+  )
+
+  # define function
+  fun <- function(data) {
+    rlang::exec(
+      openair::pollutionRose,
+      !!!append(
+        list(mydata = data),
+        fun_args
+      )
     )
   }
 
@@ -162,6 +178,7 @@ pollroseMap <- function(data,
   plots_df <-
     create_polar_markers(
       fun = fun,
+      fun_args = fun_args,
       data = data,
       latitude = latitude,
       longitude = longitude,
@@ -169,6 +186,7 @@ pollroseMap <- function(data,
       d.fig = d.fig,
       popup = popup,
       label = label,
+      theme = theme,
       progress = progress
     )
 
@@ -185,20 +203,21 @@ pollroseMap <- function(data,
         facet.nrow = static.nrow,
         d.icon = d.icon,
         crs = crs,
-        provider = provider
+        provider = provider,
+        alpha = alpha
       )
 
     # create legend
-    if (!is.null(breaks) & legend) {
-      intervals <- attr(plots_df$plot[[1]]$data, "intervals")
+    if (!is.null(breaks) && legend) {
+      intervals <- attr(plots_df$plot[[1]], "intervals")
       intervals <- factor(intervals, intervals)
       pal <-
-        openair::openColours(scheme = cols, n = length(intervals)) %>%
+        openair::openColours(scheme = cols, n = length(intervals)) |>
         stats::setNames(intervals)
 
       # create dummy df for creating legend
       dummy <-
-        dplyr::distinct(plots_df, .data[[longitude]], .data[[latitude]]) %>%
+        dplyr::distinct(plots_df, .data[[longitude]], .data[[latitude]]) |>
         tidyr::crossing(intervals)
 
       legend.title <-
@@ -212,17 +231,27 @@ pollroseMap <- function(data,
       # add legend
       map <-
         map +
-        ggplot2::geom_point(
+        ggplot2::geom_tile(
           data = dummy,
-          ggplot2::aes(.data[[longitude]], .data[[latitude]],
+          ggplot2::aes(
+            .data[[longitude]],
+            .data[[latitude]],
+            color = .data[["intervals"]],
             fill = .data[["intervals"]]
           ),
-          size = 0,
-          key_glyph = ggplot2::draw_key_rect
+          show.legend = TRUE,
+          alpha = 0
         ) +
-        ggplot2::scale_fill_manual(values = pal, drop = FALSE) +
-        ggplot2::labs(fill = legend.title) +
-        ggplot2::theme(legend.position = legend.position)
+        ggplot2::scale_fill_manual(
+          values = pal,
+          drop = FALSE,
+          aesthetics = c("fill", "color")
+        ) +
+        ggplot2::labs(color = legend.title, fill = legend.title) +
+        ggplot2::theme(legend.position = legend.position) +
+        ggplot2::guides(
+          color = ggplot2::guide_legend(override.aes = list(alpha = 1))
+        )
     }
   }
 
@@ -241,11 +270,12 @@ pollroseMap <- function(data,
         split_col,
         control.collapsed,
         control.position,
-        control.autotext
+        control.autotext,
+        alpha
       )
 
     # add legend if breaks are defined
-    if (!is.null(breaks) & legend) {
+    if (!is.null(breaks) && legend) {
       legend.title <-
         create_legend_title(
           static = static,

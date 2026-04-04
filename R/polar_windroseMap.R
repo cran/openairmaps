@@ -6,6 +6,7 @@
 #' interacted with. Using the `static` argument allows for static images to be
 #' produced instead.
 #'
+#' @inheritSection polarMap Parallel processing with mirai
 #' @inheritSection polarMap Customisation of static maps using ggplot2
 #' @family directional analysis maps
 #'
@@ -37,7 +38,7 @@
 #'   c(0, 1, 10, 100)`` breaks the data into segments <1, 1-10, 10-100, >100.
 #'
 #' @inheritDotParams openair::windRose -ws.int -breaks -mydata -plot -annotate
-#'   -pollutant -type -cols -key
+#'   -pollutant -type -cols -key.position
 #' @returns Either:
 #'
 #'  - *Dynamic:* A leaflet object
@@ -53,33 +54,40 @@
 #'   provider = "CartoDB.Voyager"
 #' )
 #' }
-windroseMap <- function(data,
-                        ws.int = 2,
-                        breaks = 4,
-                        latitude = NULL,
-                        longitude = NULL,
-                        crs = 4326,
-                        type = NULL,
-                        popup = NULL,
-                        label = NULL,
-                        provider = "OpenStreetMap",
-                        cols = "turbo",
-                        alpha = 1,
-                        key = FALSE,
-                        legend = TRUE,
-                        legend.position = NULL,
-                        legend.title = NULL,
-                        legend.title.autotext = TRUE,
-                        control.collapsed = FALSE,
-                        control.position = "topright",
-                        control.autotext = TRUE,
-                        d.icon = 200,
-                        d.fig = 3.5,
-                        static = FALSE,
-                        static.nrow = NULL,
-                        progress = TRUE,
-                        ...,
-                        control = NULL) {
+windroseMap <- function(
+  data,
+  ws.int = 2,
+  breaks = 4,
+  latitude = NULL,
+  longitude = NULL,
+  crs = 4326,
+  type = NULL,
+  popup = NULL,
+  label = NULL,
+  provider = "OpenStreetMap",
+  cols = "turbo",
+  alpha = 1,
+  theme = NULL,
+  key.position = "none",
+  legend = TRUE,
+  legend.position = NULL,
+  legend.title = NULL,
+  legend.title.autotext = TRUE,
+  control.collapsed = FALSE,
+  control.position = "topright",
+  control.autotext = TRUE,
+  d.icon = 200,
+  d.fig = 3.5,
+  static = FALSE,
+  static.nrow = NULL,
+  progress = TRUE,
+  ...,
+  control = NULL
+) {
+  if (static) {
+    check_installed_static()
+  }
+
   # check basemap providers are valid
   provider <- check_providers(provider, static)
   legend.position <- check_legendposition(legend.position, static)
@@ -148,19 +156,27 @@ windroseMap <- function(data,
     split_col <- "pollutant_name"
   }
 
-  # define function
-  fun <- function(data) {
-    openair::windRose(
-      data,
+  # arguments for function
+  fun_args <- append(
+    list(
       plot = FALSE,
       ws.int = ws.int,
       breaks = breaks,
       cols = cols,
-      alpha = alpha,
-      key = key,
-      annotate = FALSE,
-      ...,
-      par.settings = list(axis.line = list(col = "transparent"))
+      key.position = key.position,
+      annotate = FALSE
+    ),
+    rlang::list2(...)
+  )
+
+  # define function
+  fun <- function(data) {
+    rlang::exec(
+      openair::windRose,
+      !!!append(
+        list(mydata = data),
+        fun_args
+      )
     )
   }
 
@@ -168,6 +184,7 @@ windroseMap <- function(data,
   plots_df <-
     create_polar_markers(
       fun = fun,
+      fun_args = fun_args,
       data = data,
       latitude = latitude,
       longitude = longitude,
@@ -175,6 +192,7 @@ windroseMap <- function(data,
       d.fig = d.fig,
       popup = popup,
       label = label,
+      theme = theme,
       progress = progress
     )
 
@@ -191,19 +209,20 @@ windroseMap <- function(data,
         facet.nrow = static.nrow,
         d.icon = d.icon,
         crs = crs,
-        provider = provider
+        provider = provider,
+        alpha = alpha
       )
 
     if (legend) {
       # sort out legend
-      intervals <- attr(plots_df$plot[[1]]$data, "intervals")
+      intervals <- attr(plots_df$plot[[1]], "intervals")
       intervals <- factor(intervals, intervals)
-      pal <- openair::openColours(scheme = cols, n = length(intervals)) %>%
+      pal <- openair::openColours(scheme = cols, n = length(intervals)) |>
         stats::setNames(intervals)
 
       # create dummy df for creating legend
       dummy <-
-        dplyr::distinct(plots_df, .data[[longitude]], .data[[latitude]]) %>%
+        dplyr::distinct(plots_df, .data[[longitude]], .data[[latitude]]) |>
         tidyr::crossing(intervals)
 
       legend.title <-
@@ -217,17 +236,27 @@ windroseMap <- function(data,
       # add legend
       map <-
         map +
-        ggplot2::geom_point(
+        ggplot2::geom_tile(
           data = dummy,
-          ggplot2::aes(.data[[longitude]], .data[[latitude]],
+          ggplot2::aes(
+            .data[[longitude]],
+            .data[[latitude]],
+            color = .data[["intervals"]],
             fill = .data[["intervals"]]
           ),
-          size = 0,
-          key_glyph = ggplot2::draw_key_rect
+          show.legend = TRUE,
+          alpha = 0
         ) +
-        ggplot2::scale_fill_manual(values = pal, drop = FALSE) +
-        ggplot2::labs(fill = legend.title) +
-        ggplot2::theme(legend.position = legend.position)
+        ggplot2::scale_color_manual(
+          values = pal,
+          drop = FALSE,
+          aesthetics = c("color", "fill")
+        ) +
+        ggplot2::labs(color = legend.title, fill = legend.title) +
+        ggplot2::theme(legend.position = legend.position) +
+        ggplot2::guides(
+          color = ggplot2::guide_legend(override.aes = list(alpha = 1))
+        )
     }
 
     return(map)
@@ -248,7 +277,8 @@ windroseMap <- function(data,
         split_col,
         control.collapsed,
         control.position,
-        control.autotext
+        control.autotext,
+        alpha
       )
 
     # add legend

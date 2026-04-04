@@ -80,7 +80,6 @@ quickTextHTML <- function(text) {
 }
 
 
-
 #' Build a Complex Popup for a Leaflet Map
 #'
 #' Group a dataframe together by latitude/longitude columns and create a HTML
@@ -141,7 +140,7 @@ quickTextHTML <- function(text) {
 #'
 #' @param ... **Not currently used.**
 #'
-#' @returns a [tibble::tibble()]
+#' @returns a [tibble][tibble::tibble()]
 #' @export
 #'
 #' @examples
@@ -153,19 +152,30 @@ quickTextHTML <- function(text) {
 #'     "Site Type" = "site_type",
 #'     "Date Range" = "date"
 #'   )
-#' ) %>%
+#' ) |>
 #'   polarMap("nox", popup = "popup")
 #' }
 buildPopup <-
-  function(data,
-           columns,
-           latitude = NULL,
-           longitude = NULL,
-           type = NULL,
-           fun.character = function(x) paste(unique(x), collapse = ", "),
-           fun.numeric = function(x) signif(mean(x, na.rm = TRUE), 3),
-           fun.dttm = function(x) paste(lubridate::floor_date(range(x, na.rm = TRUE), "day"), collapse = " to "),
-           ...) {
+  function(
+    data,
+    columns,
+    latitude = NULL,
+    longitude = NULL,
+    type = NULL,
+    fun.character = function(x) {
+      paste(unique(x), collapse = ", ")
+    },
+    fun.numeric = function(x) {
+      signif(mean(x, na.rm = TRUE), 3)
+    },
+    fun.dttm = function(x) {
+      paste(
+        lubridate::floor_date(range(x, na.rm = TRUE), "day"),
+        collapse = " to "
+      )
+    },
+    ...
+  ) {
     # check for old facet/control opts
     dots <- rlang::list2(...)
     type <- type %||% check_facet_control(control = dots$control)
@@ -182,10 +192,19 @@ buildPopup <-
     make_popup <- function(data) {
       # multiple columns
       summary <-
-        data %>%
-        dplyr::select(dplyr::all_of(c(latitude, longitude, as.vector(columns)))) %>%
-        dplyr::group_by(.data[[latitude]], .data[[longitude]]) %>%
-        dplyr::summarise(dplyr::across(dplyr::where(is.character) | dplyr::where(is.factor), fun.character),
+        data |>
+        dplyr::select(dplyr::all_of(c(
+          latitude,
+          longitude,
+          as.vector(columns)
+        ))) |>
+        dplyr::group_by(.data[[latitude]], .data[[longitude]]) |>
+        dplyr::summarise(
+          dplyr::across(
+            dplyr::where(is.character) |
+              dplyr::where(is.factor),
+            fun.character
+          ),
           dplyr::across(dplyr::where(is.numeric), fun.numeric),
           dplyr::across(dplyr::where(lubridate::is.POSIXct), fun.dttm),
           .groups = "drop"
@@ -197,8 +216,8 @@ buildPopup <-
       }
 
       out <-
-        summary %>%
-        dplyr::select(-dplyr::all_of(c(latitude, longitude))) %>%
+        summary |>
+        dplyr::select(-dplyr::all_of(c(latitude, longitude))) |>
         purrr::imodify(.f = ~ stringr::str_glue("<b>{.y}</b>: {.x}"))
 
       if (typeof(out) == "list") {
@@ -207,11 +226,17 @@ buildPopup <-
       }
 
       out <-
-        out %>%
-        dplyr::mutate(dplyr::across(.cols = dplyr::everything(), .fns = quickTextHTML)) %>%
-        dplyr::rowwise() %>%
+        out |>
+        dplyr::mutate(dplyr::across(
+          .cols = dplyr::everything(),
+          .fns = quickTextHTML
+        )) |>
+        dplyr::rowwise() |>
         dplyr::mutate(
-          popup = paste(dplyr::c_across(cols = dplyr::everything()), collapse = "<br>"),
+          popup = paste(
+            dplyr::c_across(cols = dplyr::everything()),
+            collapse = "<br>"
+          ),
           .keep = "unused"
         )
 
@@ -225,8 +250,8 @@ buildPopup <-
     }
 
     if (!is.null(type)) {
-      out <- dplyr::group_split(data, .data[[type]]) %>%
-        purrr::map(make_popup) %>%
+      out <- dplyr::group_split(data, .data[[type]]) |>
+        purrr::map(make_popup) |>
         purrr::list_rbind()
     } else {
       out <- make_popup(data)
@@ -263,22 +288,30 @@ buildPopup <-
 #'   <https://github.com/ropensci/PostcodesioR/>
 #' @source <https://postcodes.io/>
 convertPostcode <- function(postcode) {
-  rlang::check_installed("httr")
-  rlang::check_installed("jsonlite")
+  rlang::check_installed(c("curl", "jsonlite"))
+  response <- curl::curl_fetch_memory(fmt_api_call(postcode))
 
-  postcode <- stringr::str_remove_all(postcode, " ")
-  api <- stringr::str_glue("api.postcodes.io/postcodes/{postcode}")
-  get <- httr::GET(api)
-  out <- rawToChar(get$content) %>%
-    jsonlite::parse_json()
-
-  if (out$status == 404L) {
-    cli::cli_abort("'{postcode}' is not a valid UK postcode.")
+  if (response$status_code != 200L) {
+    cli::cli_abort(raw_to_json(response$content)$error, call = NULL)
   }
 
+  content <- raw_to_json(response$content)
+
   list(
-    lat = out$result$latitude,
-    lng = out$result$longitude,
-    postcode = out$result$postcode
+    lat = content$result$latitude,
+    lng = content$result$longitude,
+    postcode = content$result$postcode
   )
+}
+
+#' @noRd
+fmt_api_call <- function(postcode) {
+  postcode <- tolower(postcode)
+  postcode <- gsub(" ", "", postcode)
+  paste0("api.postcodes.io/postcodes/", postcode)
+}
+
+#' @noRd
+raw_to_json <- function(x) {
+  jsonlite::fromJSON(rawToChar(x))
 }

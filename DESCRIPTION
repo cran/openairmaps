@@ -1,7 +1,7 @@
 Type: Package
 Package: openairmaps
 Title: Create Maps of Air Pollution Data
-Version: 0.9.1
+Version: 0.10.0
 Authors@R: c(
     person("Jack", "Davison", , "jack.davison@ricardo.com", role = c("cre", "aut"),
            comment = c(ORCID = "0000-0003-2653-6615")),
@@ -12,24 +12,27 @@ Description: Combine the air quality data analysis methods of 'openair'
     with the JavaScript 'Leaflet' (<https://leafletjs.com/>) library.
     Functionality includes plotting site maps, "directional analysis"
     figures such as polar plots, and air mass trajectories.
-License: GPL (>= 3)
-URL: https://davidcarslaw.github.io/openairmaps/,
-        https://github.com/davidcarslaw/openairmaps
-BugReports: https://github.com/davidcarslaw/openairmaps/issues
-Depends: R (>= 3.2.0)
-Imports: cli, dplyr, forcats, ggplot2, ggspatial, ggtext, leaflet (>=
-        2.2.0), lifecycle, lubridate, magrittr, mgcv, openair (>=
-        2.13), prettymapr, purrr (>= 1.0.0), rlang, rosm, sf, stringr,
-        tibble, tidyr
-Suggests: httr, jsonlite, knitr, rmarkdown, shiny, worldmet
+License: MIT + file LICENSE
+URL: https://openair-project.github.io/openairmaps/,
+        https://github.com/openair-project/openairmaps
+BugReports: https://github.com/openair-project/openairmaps/issues
+Depends: R (>= 4.1.0)
+Imports: cli, dplyr, ggplot2, leaflet (>= 2.2.0), lifecycle, lubridate,
+        openair (>= 3.0.0), purrr (>= 1.1.0), rlang, sf, stringr, tidyr
+Suggests: carrier, curl, ggspatial, ggtext, gstat, jsonlite, knitr,
+        mgcv, mirai, png, prettymapr, rmarkdown, shiny (>= 1.9.0),
+        stars, terra, testthat (>= 3.0.0), withr
+Config/Needs/website: openair-project/openairpkgdown, rnaturalearthdata
+Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-GB
 LazyData: true
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 NeedsCompilation: no
-Packaged: 2024-11-19 08:50:07 UTC; JD38
-Author: Jack Davison [cre, aut] (<https://orcid.org/0000-0003-2653-6615>),
-  David Carslaw [aut] (<https://orcid.org/0000-0003-0991-950X>)
+Packaged: 2026-04-04 15:00:35 UTC; JD38
+Author: Jack Davison [cre, aut] (ORCID:
+    <https://orcid.org/0000-0003-2653-6615>),
+  David Carslaw [aut] (ORCID: <https://orcid.org/0000-0003-0991-950X>)
 Maintainer: Jack Davison <jack.davison@ricardo.com>
 Repository: CRAN
-Date/Publication: 2024-11-19 10:20:03 UTC
+Date/Publication: 2026-04-04 15:10:02 UTC

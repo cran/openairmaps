@@ -26,7 +26,7 @@
 #' @param lat The decimal latitude.
 #' @param popup A column of `data` to be used as a popup.
 #' @param label A column of `data` to be used as a label.
-#' @param key Should a key for each marker be drawn? Default is `FALSE`.
+#' @param key.position Passed to `key.position` for the relevant `fun`.
 #' @param d.icon The diameter of the plot on the map in pixels. This will affect
 #'   the size of the individual polar markers. Alternatively, a vector in the
 #'   form `c(width, height)` can be provided if a non-circular marker is
@@ -35,6 +35,10 @@
 #'   inches. This will affect the resolution of the markers on the map.
 #'   Alternatively, a vector in the form `c(width, height)` can be provided if a
 #'   non-circular marker is desired.
+#' @param theme Optional [ggplot2::theme()] elements to add to the polar marker
+#'   before it is saved.
+#' @param alpha The desired opacity of the polar markers. Can also be set via
+#'   `options` but is provided here for convenience.
 #' @param ... Other arguments for the plotting function (e.g. `period` for
 #'   [openair::polarAnnulus()]).
 #' @returns A leaflet object.
@@ -50,48 +54,54 @@
 #' library(openair)
 #'
 #' # different types of polar plot on one map
-#' leaflet(data = polar_data) %>%
-#'   addTiles() %>%
-#'   addPolarMarkers("ws",
+#' leaflet(data = polar_data) |>
+#'   addTiles() |>
+#'   addPolarMarkers(
+#'     "ws",
 #'     fun = openair::windRose,
+#'     annotate = FALSE,
 #'     group = "Wind Rose"
-#'   ) %>%
-#'   addPolarMarkers("nox",
-#'     fun = openair::polarPlot,
-#'     group = "Polar Plot"
-#'   ) %>%
+#'   ) |>
+#'   addPolarMarkers("nox", fun = openair::polarPlot, group = "Polar Plot") |>
 #'   addLayersControl(
 #'     baseGroups = c("Wind Rose", "Polar Plot")
 #'   )
 #'
 #' # use of polar diff (NB: both 'before' and 'after' inherit from `leaflet()`,
 #' # so at least one should be overridden - in this case 'after')
-#' leaflet(data = polar_data) %>%
-#'   addTiles() %>%
+#' leaflet(data = polar_data) |>
+#'   addTiles() |>
 #'   addPolarDiffMarkers("nox",
 #'     after = dplyr::mutate(polar_data, nox = jitter(nox, 5))
 #'   )
 #' }
 addPolarMarkers <-
-  function(map,
-           pollutant,
-           fun = openair::polarPlot,
-           lng = NULL,
-           lat = NULL,
-           layerId = NULL,
-           group = NULL,
-           popup = NULL,
-           popupOptions = NULL,
-           label = NULL,
-           labelOptions = NULL,
-           options = leaflet::markerOptions(),
-           clusterOptions = NULL,
-           clusterId = NULL,
-           key = FALSE,
-           d.icon = 200,
-           d.fig = 3.5,
-           data = leaflet::getMapData(map),
-           ...) {
+  function(
+    map,
+    pollutant,
+    fun = openair::polarPlot,
+    lng = NULL,
+    lat = NULL,
+    layerId = NULL,
+    group = NULL,
+    popup = NULL,
+    popupOptions = NULL,
+    label = NULL,
+    labelOptions = NULL,
+    options = leaflet::markerOptions(),
+    clusterOptions = NULL,
+    clusterId = NULL,
+    theme = NULL,
+    key.position = "none",
+    d.icon = 200,
+    d.fig = 3.5,
+    alpha = 1,
+    data = leaflet::getMapData(map),
+    ...
+  ) {
+    # need to rename fun input - for carrier crating
+    polar_fun <- fun
+
     # guess lat/lon
     latlon <- assume_latlon(
       data = data,
@@ -102,16 +112,21 @@ addPolarMarkers <-
     longitude <- latlon$longitude
 
     # define plotting function
-    theargs <- list(...)
-    thefun <- function(data, args = theargs) {
-      rlang::exec(
-        .fn = fun,
-        mydata = data,
+    fun_args <- append(
+      list(
         pollutant = pollutant,
-        key = key,
-        plot = FALSE,
-        !!!args,
-        par.settings = list(axis.line = list(col = "transparent"))
+        key.position = key.position,
+        plot = FALSE
+      ),
+      rlang::list2(...)
+    )
+    fun <- function(data) {
+      rlang::exec(
+        .fn = polar_fun,
+        !!!append(
+          list(mydata = data),
+          fun_args
+        )
       )
     }
 
@@ -122,7 +137,8 @@ addPolarMarkers <-
     # plot and save static markers
     plots_df <-
       create_polar_markers(
-        fun = thefun,
+        fun = fun,
+        fun_args = fun_args,
         data = data,
         latitude = latitude,
         longitude = longitude,
@@ -130,7 +146,10 @@ addPolarMarkers <-
         d.fig = d.fig,
         popup = popup,
         label = label,
-        dropcol = pollutant
+        dropcol = "no2",
+        theme = theme,
+        progress = TRUE,
+        polar_fun = polar_fun
       )
 
     # work out width/height
@@ -140,6 +159,22 @@ addPolarMarkers <-
     if (length(d.icon) == 2) {
       width <- d.icon[[1]]
       height <- d.icon[[2]]
+    }
+
+    # handle alpha
+    if (!missing(alpha)) {
+      options$opacity <- alpha
+    }
+
+    # drop data where no plot was created
+    plots_df <- dplyr::filter(
+      plots_df,
+      purrr::map_vec(.data$plot, \(x) !is.null(x))
+    )
+
+    if (nrow(plots_df) == 0L) {
+      cli::cli_warn("No valid polar markers were created.")
+      return(map)
     }
 
     # get marker arguments
@@ -189,25 +224,29 @@ addPolarMarkers <-
 #' @order 2
 #' @export
 addPolarDiffMarkers <-
-  function(map,
-           pollutant,
-           before = leaflet::getMapData(map),
-           after = leaflet::getMapData(map),
-           lng = NULL,
-           lat = NULL,
-           layerId = NULL,
-           group = NULL,
-           popup = NULL,
-           popupOptions = NULL,
-           label = NULL,
-           labelOptions = NULL,
-           options = leaflet::markerOptions(),
-           clusterOptions = NULL,
-           clusterId = NULL,
-           key = FALSE,
-           d.icon = 200,
-           d.fig = 3.5,
-           ...) {
+  function(
+    map,
+    pollutant,
+    before = leaflet::getMapData(map),
+    after = leaflet::getMapData(map),
+    lng = NULL,
+    lat = NULL,
+    layerId = NULL,
+    group = NULL,
+    popup = NULL,
+    popupOptions = NULL,
+    label = NULL,
+    labelOptions = NULL,
+    options = leaflet::markerOptions(),
+    clusterOptions = NULL,
+    clusterId = NULL,
+    theme = NULL,
+    key.position = "none",
+    d.icon = 200,
+    d.fig = 3.5,
+    alpha = 1,
+    ...
+  ) {
     # guess lat/lon
     latlon <- assume_latlon(
       data = before,
@@ -225,10 +264,9 @@ addPolarDiffMarkers <-
         before = before,
         after = after,
         pollutant = pollutant,
-        key = key,
+        key.position = key.position,
         plot = FALSE,
-        !!!args,
-        par.settings = list(axis.line = list(col = "transparent"))
+        !!!args
       )
       plt$plot
     }
@@ -250,7 +288,9 @@ addPolarDiffMarkers <-
         d.fig = d.fig,
         popup = popup,
         label = label,
-        dropcol = pollutant
+        dropcol = pollutant,
+        theme = theme,
+        progress = TRUE
       )
 
     # work out width/height
@@ -260,6 +300,22 @@ addPolarDiffMarkers <-
     if (length(d.icon) == 2) {
       width <- d.icon[[1]]
       height <- d.icon[[2]]
+    }
+
+    # handle alpha
+    if (!missing(alpha)) {
+      options$opacity <- alpha
+    }
+
+    # drop data where no plot was created
+    plots_df <- dplyr::filter(
+      plots_df,
+      purrr::map_vec(.data$plot, \(x) !is.null(x))
+    )
+
+    if (nrow(plots_df) == 0L) {
+      cli::cli_warn("No valid polar markers were created.")
+      return(map)
     }
 
     # get marker arguments

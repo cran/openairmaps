@@ -7,6 +7,7 @@
 #' interacted with. Using the `static` argument allows for static images to be
 #' produced instead.
 #'
+#' @inheritSection polarMap Parallel processing with mirai
 #' @inheritSection polarMap Customisation of static maps using ggplot2
 #' @family directional analysis maps
 #'
@@ -17,26 +18,26 @@
 #'
 #'  *default:* `"free"` | *scope:* dynamic & static
 #'
-#'  One of:
+#'   One of:
 #'  - `"free"` (the default) which allows all of the markers to use different
-#'  colour scales.
+#'   colour scales.
 #'  - A numeric vector in the form `c(lower, upper)` used to define the colour
-#'  scale. For example, `limits = c(-10, 10)` would force the plot limits to
-#'  span -10 to 10. It is recommended to use a symmetrical limit scale (along
-#'  with a "diverging" colour palette) for effective visualisation.
+#'   scale. For example, `limits = c(-10, 10)` would force the plot limits to
+#'   span -10 to 10. It is recommended to use a symmetrical limit scale (along
+#'   with a "diverging" colour palette) for effective visualisation.
 #'
-#'  Note that the `"fixed"` option is not supported in [diffMap()].
+#'   Note that the `"fixed"` option is not supported in [diffMap()].
 #'
 #' @param cols *Colours to use for plotting.*
 #'
 #'  *default:* `rev(openair::openColours("RdBu", 10))` | *scope:* dynamic & static
 #'
-#'  The colours used for plotting, passed to [openair::openColours()].  It is
-#'  recommended to use a "diverging" colour palette (along with a symmetrical
-#'  `limit` scale) for effective visualisation.
-#' 
+#'   The colours used for plotting, passed to [openair::openColours()].  It is
+#'   recommended to use a "diverging" colour palette (along with a symmetrical
+#'   `limit` scale) for effective visualisation.
+#'
 #' @inheritDotParams openair::polarPlot -mydata -pollutant -x -limits -type
-#'   -cols -key -key.footer -key.header -key.position -units -angle.scale -alpha
+#'   -cols -key -key.title -key.position -units -angle.scale
 #'   -plot
 #' @returns Either:
 #'
@@ -55,35 +56,42 @@
 #'   pollutant = "nox"
 #' )
 #' }
-diffMap <- function(before,
-                    after,
-                    pollutant = NULL,
-                    x = "ws",
-                    limits = "free",
-                    latitude = NULL,
-                    longitude = NULL,
-                    crs = 4326,
-                    type = NULL,
-                    popup = NULL,
-                    label = NULL,
-                    provider = "OpenStreetMap",
-                    cols = rev(openair::openColours("RdBu", 10)),
-                    alpha = 1,
-                    key = FALSE,
-                    legend = TRUE,
-                    legend.position = NULL,
-                    legend.title = NULL,
-                    legend.title.autotext = TRUE,
-                    control.collapsed = FALSE,
-                    control.position = "topright",
-                    control.autotext = TRUE,
-                    d.icon = 200,
-                    d.fig = 3.5,
-                    static = FALSE,
-                    static.nrow = NULL,
-                    progress = TRUE,
-                    ...,
-                    control = NULL) {
+diffMap <- function(
+  before,
+  after,
+  pollutant = NULL,
+  x = "ws",
+  limits = "free",
+  latitude = NULL,
+  longitude = NULL,
+  crs = 4326,
+  type = NULL,
+  popup = NULL,
+  label = NULL,
+  provider = "OpenStreetMap",
+  cols = rev(openair::openColours("RdBu", 10)),
+  alpha = 1,
+  theme = NULL,
+  key.position = "none",
+  legend = TRUE,
+  legend.position = NULL,
+  legend.title = NULL,
+  legend.title.autotext = TRUE,
+  control.collapsed = FALSE,
+  control.position = "topright",
+  control.autotext = TRUE,
+  d.icon = 200,
+  d.fig = 3.5,
+  static = FALSE,
+  static.nrow = NULL,
+  progress = TRUE,
+  ...,
+  control = NULL
+) {
+  if (static) {
+    check_installed_static()
+  }
+
   # check basemap providers are valid
   provider <- check_providers(provider, static)
   legend.position <- check_legendposition(legend.position, static)
@@ -102,32 +110,9 @@ diffMap <- function(before,
 
   # auto limits
   if ("fixed" %in% limits) {
-    cli::cli_abort("{.code limits = 'fixed'} is currently not supported for {.fun diffMap}.")
-    # if (length(pollutant) == 1) {
-    #   before <-
-    #     dplyr::mutate(before, latlng = paste(.data[[latitude]], .data[[longitude]]))
-    #   after <-
-    #     dplyr::mutate(after, latlng = paste(.data[[latitude]], .data[[longitude]]))
-    #
-    #   type <- control
-    #   if (is.null(control)) {
-    #     type <- "default"
-    #   }
-    #
-    #   testplots <-
-    #     openair::polarDiff(
-    #       before = before, after = after,
-    #       pollutant = pollutant,
-    #       x = x,
-    #       type = c("latlng", type),
-    #       plot = FALSE,
-    #       ...
-    #     )$data
-    #
-    #   theLimits <- range(testplots[[pollutant]], na.rm = TRUE)
-    # } else {
-    #   cli::cli_warn("{.code limits == 'auto'} only works with a single given {.field pollutant}")
-    # }
+    cli::cli_abort(
+      "{.code limits = 'fixed'} is currently not supported for {.fun diffMap}."
+    )
   } else if ("free" %in% limits) {
     theLimits <- NA
   } else if (is.numeric(limits)) {
@@ -203,11 +188,9 @@ diffMap <- function(before,
       x = x,
       limits = theLimits,
       cols = cols,
-      alpha = alpha,
-      key = key,
+      key.position = key.position,
       plot = FALSE,
-      ...,
-      par.settings = list(axis.line = list(col = "transparent"))
+      ...
     )$plot
   }
 
@@ -223,6 +206,7 @@ diffMap <- function(before,
       d.fig = d.fig,
       popup = popup,
       label = label,
+      theme = theme,
       progress = progress
     )
 
@@ -239,11 +223,12 @@ diffMap <- function(before,
         facet.nrow = static.nrow,
         d.icon = d.icon,
         crs = crs,
-        provider = provider
+        provider = provider,
+        alpha = alpha
       )
 
     # create colorbar if limits specified
-    if (!all(is.na(theLimits)) & legend) {
+    if (!all(is.na(theLimits)) && legend) {
       legend.title <-
         create_legend_title(
           static = static,
@@ -283,11 +268,12 @@ diffMap <- function(before,
         split_col,
         control.collapsed,
         control.position,
-        control.autotext
+        control.autotext,
+        alpha
       )
 
     # add legend if limits are set
-    if (!all(is.na(theLimits)) & legend) {
+    if (!all(is.na(theLimits)) && legend) {
       legend.title <-
         create_legend_title(
           static = static,
@@ -317,17 +303,20 @@ diffMap <- function(before,
 #' create diff markers
 #' @noRd
 create_polar_diffmarkers <-
-  function(fun,
-           before = before,
-           after = after,
-           latitude = latitude,
-           longitude = longitude,
-           split_col = split_col,
-           popup = NULL,
-           label = NULL,
-           d.fig,
-           dropcol = "conc",
-           progress = TRUE) {
+  function(
+    fun,
+    before = before,
+    after = after,
+    latitude = latitude,
+    longitude = longitude,
+    split_col = split_col,
+    popup = NULL,
+    label = NULL,
+    d.fig,
+    dropcol = "conc",
+    theme,
+    progress = TRUE
+  ) {
     # make temp directory
     dir <- tempdir()
 
@@ -350,14 +339,25 @@ create_polar_diffmarkers <-
 
     # get number of rows
     valid_rows <-
-      nrow(dplyr::distinct(before, .data[[latitude]], .data[[longitude]], .data[[split_col]]))
+      nrow(dplyr::distinct(
+        before,
+        .data[[latitude]],
+        .data[[longitude]],
+        .data[[split_col]]
+      ))
 
     # nest data
-    nested_before <- before %>%
-      tidyr::nest(before = -dplyr::all_of(c(
-        latitude, longitude, split_col, popup, label
-      )))
-    nested_after <- after %>%
+    nested_before <- before |>
+      tidyr::nest(
+        before = -dplyr::all_of(c(
+          latitude,
+          longitude,
+          split_col,
+          popup,
+          label
+        ))
+      )
+    nested_after <- after |>
       tidyr::nest(after = -dplyr::all_of(c(latitude, longitude, split_col)))
 
     # warn if missing
@@ -374,8 +374,12 @@ create_polar_diffmarkers <-
             nested_before,
             by = c(latitude, longitude, split_col)
           )
-        ) %>%
-        tidyr::unite("warning", dplyr::any_of(c(latitude, longitude, split_col)), sep = "/") %>%
+        ) |>
+        tidyr::unite(
+          "warning",
+          dplyr::any_of(c(latitude, longitude, split_col)),
+          sep = "/"
+        ) |>
         dplyr::distinct(.data$warning)
 
       cli::cli_warn(
@@ -399,13 +403,30 @@ create_polar_diffmarkers <-
 
     # create plots
     plots_df <-
-      dplyr::inner_join(nested_before,
+      dplyr::inner_join(
+        nested_before,
         nested_after,
         by = c(latitude, longitude, split_col)
-      ) %>%
+      ) |>
       dplyr::mutate(
-        plot = purrr::map2(before, after, fun, .progress = ifelse(progress, "Creating Polar Markers", FALSE)),
-        url = paste0(dir, "/", .data[[latitude]], "_", .data[[longitude]], "_", .data[[split_col]], "_", id, ".png")
+        plot = purrr::map2(
+          before,
+          after,
+          fun,
+          .progress = ifelse(progress, "Creating Polar Markers", FALSE)
+        ),
+        url = paste0(
+          dir,
+          "/",
+          .data[[latitude]],
+          "_",
+          .data[[longitude]],
+          "_",
+          .data[[split_col]],
+          "_",
+          id,
+          ".png"
+        )
       )
 
     # work out w/h
@@ -417,21 +438,28 @@ create_polar_diffmarkers <-
       height <- d.fig[[2]]
     }
 
-    purrr::pwalk(list(plots_df[[latitude]], plots_df[[longitude]], plots_df[[split_col]], plots_df$plot),
+    purrr::pwalk(
+      list(
+        plots_df[[latitude]],
+        plots_df[[longitude]],
+        plots_df[[split_col]],
+        plots_df$plot
+      ),
       .f = ~ {
-        grDevices::png(
+        ggplot2::ggsave(
+          plot = ..4 +
+            ggplot2::theme(
+              plot.margin = ggplot2::unit(rep(0, 4), "cm"),
+              legend.background = ggplot2::element_blank(),
+              legend.title = ggplot2::element_blank()
+            ) +
+            theme,
           filename = paste0(dir, "/", ..1, "_", ..2, "_", ..3, "_", id, ".png"),
-          width = width * 300,
-          height = height * 300,
-          res = 300,
-          bg = "transparent",
-          type = "cairo",
-          antialias = "none"
+          width = width * 0.75,
+          height = height * 0.75,
+          dpi = 72,
+          bg = "transparent"
         )
-
-        plot(..4)
-
-        grDevices::dev.off()
       }
     )
 

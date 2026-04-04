@@ -18,7 +18,8 @@ annulusMap(
   provider = "OpenStreetMap",
   cols = "turbo",
   alpha = 1,
-  key = FALSE,
+  theme = NULL,
+  key.position = "none",
   legend = TRUE,
   legend.position = NULL,
   legend.title = NULL,
@@ -137,8 +138,8 @@ useful for the same reasons as popups, though are typically shorter.}
 
 \emph{default:} \code{"OpenStreetMap"} | \emph{scope:} dynamic & static
 
-The base map(s) to be used beneath the polar markers. If not provided, will
-default to \code{"OpenStreetMap"}/\code{"osm"} for both dynamic and static maps.
+The base map(s) to be used for the map. If not provided, will default to
+\code{"OpenStreetMap"}/\code{"osm"} for both dynamic and static maps.
 \itemize{
 \item \emph{Dynamic}: Any number of \link[leaflet:providers]{leaflet::providers}.
 See \url{http://leaflet-extras.github.io/leaflet-providers/preview/} for a list
@@ -146,7 +147,8 @@ of all base maps that can be used. If multiple base maps are provided, they
 can be toggled between using a "layer control" interface. By default, the
 interface will use the provider names as labels, but users can define their
 own using a named vector (e.g., \code{c("Default" = "OpenStreetMap", "Satellite"   = "Esri.WorldImagery")})
-\item \emph{Static}: One of \code{\link[rosm:deprecated]{rosm::osm.types()}}.
+\item \emph{Static}: One of the options listed in \code{rosm::osm.types()} (for
+example, \code{"osm"}, \code{"cartodark"}, \code{"cartolight"}, etc.).
 }
 
 There is some overlap in static and dynamic providers. For example,
@@ -160,8 +162,7 @@ substitute the correct provider string.}
 
 The colours used for plotting, passed to \code{\link[openair:openColours]{openair::openColours()}}. The
 default, \code{"turbo"}, is a rainbow palette with relatively perceptually
-uniform colours. Read more about this palette at
-\url{https://research.google/blog/turbo-an-improved-rainbow-colormap-for-visualization/}.}
+uniform colours.}
 
 \item{alpha}{\emph{Transparency value for polar markers.}
 
@@ -169,11 +170,23 @@ uniform colours. Read more about this palette at
 
 A value between 0 (fully transparent) and 1 (fully opaque).}
 
-\item{key}{\emph{Draw individual marker legends?}
+\item{theme}{\emph{Custom ggplot2 theme for the polar markers.}
+
+\emph{default:} \code{NULL} | \emph{scope:} dynamic & static
+
+A custom \code{ggplot2} theme to add to the polar markers. This should ideally
+be a partial theme (i.e., \code{\link[ggplot2:theme]{ggplot2::theme()}}) over a complete theme (e.g.,
+\code{\link[ggplot2:ggtheme]{ggplot2::theme_bw()}}) as other arguments like \code{key} interact with the plot
+theme \emph{before} custom themes are set, so would be overriden by a complete
+theme.}
+
+\item{key.position}{\emph{Legend position for individual marker legends.}
 
 \emph{default:} \code{FALSE} | \emph{scope:} dynamic & static
 
-Draw a key for each individual marker? Potentially useful when \code{limits = "free"}, but of limited use otherwise.}
+When \code{key.position} is not \code{"none"}, a key will be drawn for each
+individual marker. Potentially useful when \code{limits = "free"}, but of
+limited use otherwise.}
 
 \item{legend}{\emph{Draw a shared legend?}
 
@@ -290,82 +303,87 @@ of \dQuote{smearing-out} the concentrations. Sometimes, a useful approach
 is to express time as local time. This correction tends to produce
 better-defined diurnal profiles of concentration (or other variables) and
 allows a better comparison to be made with emissions/activity data. If set
-to \code{FALSE} then GMT is used. Examples of usage include \code{local.tz
-  = "Europe/London"}, \code{local.tz = "America/New_York"}. See
-\code{cutData} and \code{import} for more details.}
+to \code{FALSE} then GMT is used. Examples of usage include \code{local.tz = "Europe/London"}, \code{local.tz = "America/New_York"}. See \code{cutData} and
+\code{import} for more details.}
     \item{\code{statistic}}{The statistic that should be applied to each wind
 speed/direction bin. Can be \dQuote{mean} (default), \dQuote{median},
 \dQuote{max} (maximum), \dQuote{frequency}. \dQuote{stdev} (standard
 deviation), \dQuote{weighted.mean} or \dQuote{cpf} (Conditional Probability
 Function). Because of the smoothing involved, the colour scale for some of
 these statistics is only to provide an indication of overall pattern and
-should not be interpreted in concentration units e.g. for \code{statistic =
-  "weighted.mean"} where the bin mean is multiplied by the bin frequency and
-divided by the total frequency. In many cases using \code{polarFreq} will
-be better. Setting \code{statistic = "weighted.mean"} can be useful because
-it provides an indication of the concentration * frequency of occurrence
-and will highlight the wind speed/direction conditions that dominate the
+should not be interpreted in concentration units e.g. for \code{statistic = "weighted.mean"} where the bin mean is multiplied by the bin frequency and
+divided by the total frequency. In many cases using \code{polarFreq} will be
+better. Setting \code{statistic = "weighted.mean"} can be useful because it
+provides an indication of the concentration * frequency of occurrence and
+will highlight the wind speed/direction conditions that dominate the
 overall mean.}
-    \item{\code{percentile}}{If \code{statistic = "percentile"} or \code{statistic =
-  "cpf"} then \code{percentile} is used, expressed from 0 to 100. Note that
-the percentile value is calculated in the wind speed, wind direction
-\sQuote{bins}. For this reason it can also be useful to set \code{min.bin}
-to ensure there are a sufficient number of points available to estimate a
-percentile. See \code{quantile} for more details of how percentiles are
-calculated.}
-    \item{\code{width}}{The width of the annulus; can be \dQuote{normal} (the default),
-\dQuote{thin} or \dQuote{fat}.}
+    \item{\code{percentile}}{If \code{statistic = "percentile"} or \code{statistic = "cpf"} then
+\code{percentile} is used, expressed from 0 to 100. Note that the percentile
+value is calculated in the wind speed, wind direction \sQuote{bins}. For
+this reason it can also be useful to set \code{min.bin} to ensure there are a
+sufficient number of points available to estimate a percentile. See
+\code{quantile} for more details of how percentiles are calculated.}
+    \item{\code{col.na}}{Colour to be used to show missing data.}
+    \item{\code{offset}}{\code{offset} controls the size of the 'hole' in the middle and is
+expressed on a scale of \code{0} to \code{100}, where \code{0} is no hole and \code{100} is a
+hole that takes up the entire plotting area.}
+    \item{\code{angle.scale}}{In radial plots (e.g., \code{\link[openair:polarPlot]{polarPlot()}}), the radial scale is
+drawn directly on the plot itself. While suitable defaults have been
+chosen, sometimes the placement of the scale may interfere with an
+interesting feature. \code{angle.scale} can take any value between \code{0} and \code{360}
+to place the scale at a different angle, or \code{FALSE} to move it to the side
+of the plots.}
     \item{\code{min.bin}}{The minimum number of points allowed in a wind speed/wind
 direction bin.  The default is 1. A value of two requires at least 2 valid
 records in each bin an so on; bins with less than 2 valid records are set
 to NA. Care should be taken when using a value > 1 because of the risk of
 removing real data points. It is recommended to consider your data with
-care. Also, the \code{polarFreq} function can be of use in such
-circumstances.}
-    \item{\code{exclude.missing}}{Setting this option to \code{TRUE} (the default)
-removes points from the plot that are too far from the original data. The
-smoothing routines will produce predictions at points where no data exist
-i.e. they predict. By removing the points too far from the original data
-produces a plot where it is clear where the original data lie. If set to
-\code{FALSE} missing data will be interpolated.}
-    \item{\code{date.pad}}{For \code{type = "trend"} (default), \code{date.pad = TRUE}
-will pad-out missing data to the beginning of the first year and the end of
-the last year. The purpose is to ensure that the trend plot begins and ends
-at the beginning or end of year.}
-    \item{\code{force.positive}}{The default is \code{TRUE}. Sometimes if smoothing data
-with steep gradients it is possible for predicted values to be negative.
-\code{force.positive = TRUE} ensures that predictions remain positive. This
-is useful for several reasons. First, with lots of missing data more
+care. Also, the \code{polarFreq} function can be of use in such circumstances.}
+    \item{\code{exclude.missing}}{Setting this option to \code{TRUE} (the default) removes
+points from the plot that are too far from the original data. The smoothing
+routines will produce predictions at points where no data exist i.e. they
+predict. By removing the points too far from the original data produces a
+plot where it is clear where the original data lie. If set to \code{FALSE}
+missing data will be interpolated.}
+    \item{\code{date.pad}}{For \code{type = "trend"} (default), \code{date.pad = TRUE} will
+pad-out missing data to the beginning of the first year and the end of the
+last year. The purpose is to ensure that the trend plot begins and ends at
+the beginning or end of year.}
+    \item{\code{force.positive}}{The default is \code{TRUE}. Sometimes if smoothing data with
+steep gradients it is possible for predicted values to be negative.
+\code{force.positive = TRUE} ensures that predictions remain positive. This is
+useful for several reasons. First, with lots of missing data more
 interpolation is needed and this can result in artefacts because the
 predictions are too far from the original data. Second, if it is known
 beforehand that the data are all positive, then this option carries that
 assumption through to the prediction. The only likely time where setting
-\code{force.positive = FALSE} would be if background concentrations were
-first subtracted resulting in data that is legitimately negative. For the
-vast majority of situations it is expected that the user will not need to
-alter the default option.}
+\code{force.positive = FALSE} would be if background concentrations were first
+subtracted resulting in data that is legitimately negative. For the vast
+majority of situations it is expected that the user will not need to alter
+the default option.}
     \item{\code{k}}{The smoothing value supplied to \code{gam} for the temporal and wind
 direction components, respectively. In some cases e.g. a trend plot with
 less than 1-year of data the smoothing with the default values may become
-too noisy and affected more by outliers. Choosing a lower value of \code{k}
-(say 10) may help produce a better plot.}
-    \item{\code{normalise}}{If \code{TRUE} concentrations are normalised by dividing by
-their mean value. This is done \emph{after} fitting the smooth surface.
-This option is particularly useful if one is interested in the patterns of
-concentrations for several pollutants on different scales e.g. NOx and CO.
-Often useful if more than one \code{pollutant} is chosen.}
-    \item{\code{key.header}}{Adds additional text/labels to the scale key. For example,
-passing the options \code{key.header = "header", key.footer = "footer1"}
-adds addition text above and below the scale key. These arguments are
-passed to \code{drawOpenKey} via \code{quickText}, applying the
-\code{auto.text} argument, to handle formatting.}
-    \item{\code{key.footer}}{see \code{key.footer}.}
-    \item{\code{key.position}}{Location where the scale key is to plotted. Allowed
-arguments currently include \code{"top"}, \code{"right"}, \code{"bottom"}
-and \code{"left"}.}
-    \item{\code{auto.text}}{Either \code{TRUE} (default) or \code{FALSE}. If \code{TRUE}
-titles and axis labels will automatically try and format pollutant names
-and units properly e.g.  by subscripting the `2' in NO2.}
+too noisy and affected more by outliers. Choosing a lower value of \code{k} (say
+10) may help produce a better plot.}
+    \item{\code{normalise}}{If \code{TRUE} concentrations are normalised by dividing by their
+mean value. This is done \emph{after} fitting the smooth surface. This option is
+particularly useful if one is interested in the patterns of concentrations
+for several pollutants on different scales e.g. NOx and CO. Often useful if
+more than one \code{pollutant} is chosen.}
+    \item{\code{strip.position}}{Location where the facet 'strips' are located when
+using \code{type}. When one \code{type} is provided, can be one of \code{"left"},
+\code{"right"}, \code{"bottom"} or \code{"top"}. When two \code{type}s are provided, this
+argument defines whether the strips are "switched" and can take either
+\code{"x"}, \code{"y"}, or \code{"both"}. For example, \code{"x"} will switch the 'top' strip
+locations to the bottom of the plot.}
+    \item{\code{key.title}}{Used to set the title of the legend. The legend title is
+passed to \code{\link[openair:quickText]{quickText()}} if \code{auto.text = TRUE}.}
+    \item{\code{auto.text}}{Either \code{TRUE} (default) or \code{FALSE}. If \code{TRUE} titles and
+axis labels will automatically try and format pollutant names and units
+properly, e.g., by subscripting the "2" in "NO2". Passed to \code{\link[openair:quickText]{quickText()}}.}
+    \item{\code{key}}{Deprecated; please use \code{key.position}. If \code{FALSE}, sets
+\code{key.position} to \code{"none"}.}
   }}
 
 \item{control}{\strong{Deprecated.} Please use \code{type}.}
@@ -385,25 +403,49 @@ default, these maps are dynamic and can be panned, zoomed, and otherwise
 interacted with. Using the \code{static} argument allows for static images to be
 produced instead.
 }
+\section{Parallel processing with mirai}{
+
+
+Creating a directional analysis map can take a lot of time; each polar
+marker needs to be plot individually, and many of these require some
+expensive computations. \code{openairmaps} supports parallel processing with
+\code{{mirai}} to speed these computations up. Users may create workers by
+running \code{\link[mirai:daemons]{mirai::daemons()}} in their R session.
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{mirai::daemons(4)
+polarMap(polar_data, "no2")
+}\if{html}{\out{</div>}}
+
+Typically, spawning one fewer daemons than your number of available cores
+is a useful rule of thumb. Parallel processing will be most useful for the
+most computationally intensive plotting functions - i.e., \code{\link[=polarMap]{polarMap()}} and
+\code{\link[=annulusMap]{annulusMap()}}.
+}
+
 \section{Customisation of static maps using ggplot2}{
 
 
-As the outputs of the static directional analysis functions are \code{ggplot2}
-figures, further customisation is possible using functions such as
-\code{\link[ggplot2:theme]{ggplot2::theme()}}, \code{\link[ggplot2:guides]{ggplot2::guides()}} and \code{\link[ggplot2:labs]{ggplot2::labs()}}.
+As all static plots functions are \code{ggplot2} figures, further customisation
+is possible using functions such as \code{\link[ggplot2:theme]{ggplot2::theme()}}, \code{\link[ggplot2:guides]{ggplot2::guides()}}
+and \code{\link[ggplot2:labs]{ggplot2::labs()}}.
 
-If multiple pollutants are specified, subscripting (e.g., the "x" in "NOx")
-is achieved using the \link[ggtext:ggtext]{ggtext} package. Therefore if you
-choose to override the plot theme, it is recommended to use
-\verb{[ggplot2::theme()]} and \verb{[ggtext::element_markdown()]} to define the
-\code{strip.text} parameter.
+Subscripting pollutants (e.g., the "x" in "NOx") is achieved using the
+\link[ggtext:ggtext]{ggtext} package. Therefore if you choose to override the
+plot theme, it is recommended to use \verb{[ggplot2::theme()]} and
+\verb{[ggtext::element_markdown()]} to define the \code{strip.text} parameter.
 
-When arguments like \code{limits}, \code{percentile} or \code{breaks} are defined, a
-legend is automatically added to the figure. Legends can be removed using
-\code{ggplot2::theme(legend.position = "none")}, or further customised using
-\code{\link[ggplot2:guides]{ggplot2::guides()}} and either \code{color = ggplot2::guide_colourbar()} for
-continuous legends or \code{fill = ggplot2::guide_legend()} for discrete
-legends.
+Legends can be removed using \code{ggplot2::theme(legend.position = "none")}, or
+further customised using \code{\link[ggplot2:guides]{ggplot2::guides()}} and either \code{color = ggplot2::guide_colourbar()} for continuous legends or \code{color = ggplot2::guide_legend()} for discrete legends.
+
+The extent of a map can be adjusted using the \code{xlim} and \code{ylim} arguments
+of \code{\link[ggplot2:ggsf]{ggplot2::coord_sf()}}.
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{polarMap(polar_data, "no2", static = TRUE) +
+    ggplot2::coord_sf(
+        xlim = c(-0.3, 0.2),
+        ylim = c(51.2, 51.8)
+    )
+}\if{html}{\out{</div>}}
 }
 
 \examples{

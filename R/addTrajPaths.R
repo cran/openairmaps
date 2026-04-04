@@ -59,13 +59,13 @@
 #'
 #' pal <- colorNumeric(palette = "viridis", domain = traj_data$nox)
 #'
-#' map <- leaflet() %>%
+#' map <- leaflet() |>
 #'   addTiles()
 #'
 #' for (i in seq(length(unique(traj_data$date)))) {
 #'   data <- dplyr::filter(traj_data, date == unique(traj_data$date)[i])
 #'
-#'   map <- map %>%
+#'   map <- map |>
 #'     addTrajPaths(
 #'       data = data,
 #'       color = pal(data$nox)[1]
@@ -75,14 +75,16 @@
 #' map
 #' }
 addTrajPaths <-
-  function(map,
-           lng = "lon",
-           lat = "lat",
-           layerId = NULL,
-           group = NULL,
-           data = leaflet::getMapData(map),
-           npoints = 12,
-           ...) {
+  function(
+    map,
+    lng = "lon",
+    lat = "lat",
+    layerId = NULL,
+    group = NULL,
+    data = leaflet::getMapData(map),
+    npoints = 12,
+    ...
+  ) {
     # check opts
     opts <- list(...)
     if ("color" %in% names(opts)) {
@@ -102,13 +104,15 @@ addTrajPaths <-
     # labels
     data <- dplyr::mutate(
       data,
-      lab = stringr::str_glue("<b>Arrival Date:</b> {date}<br>
+      lab = stringr::str_glue(
+        "<b>Arrival Date:</b> {date}<br>
                              <b>Trajectory Date:</b> {date2}<br>
                              <b>Lat:</b> {lat} | <b>Lon:</b> {lon}<br>
-                             <b>Height:</b> {height} m | <b>Pressure:</b> {pressure} Pa")
+                             <b>Height:</b> {height} m | <b>Pressure:</b> {pressure} Pa"
+      )
     )
 
-    for (i in seq(length(unique(data$datef)))) {
+    for (i in seq_along(unique(data$datef))) {
       if (!is.null(layerId)) {
         layerid <- paste(layerId, i, sep = "-")
       } else {
@@ -132,7 +136,7 @@ addTrajPaths <-
           ...
         )
 
-      for (i in 1:nrow(pdata)) {
+      for (i in seq_len(nrow(pdata))) {
         if (!is.null(layerId)) {
           layeridp <- paste(layerid, i, sep = "-")
         } else {
@@ -143,7 +147,7 @@ addTrajPaths <-
             map = map,
             data = pdata[i, ],
             radius = 3,
-            stroke = F,
+            stroke = FALSE,
             lng = pdata[i, ][[lng]],
             lat = pdata[i, ][[lat]],
             group = group,

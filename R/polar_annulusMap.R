@@ -7,6 +7,7 @@
 #' interacted with. Using the `static` argument allows for static images to be
 #' produced instead.
 #'
+#' @inheritSection polarMap Parallel processing with mirai
 #' @inheritSection polarMap Customisation of static maps using ggplot2
 #' @family directional analysis maps
 #'
@@ -19,7 +20,7 @@
 #'   plot variation throughout the year, "weekday" to plot day of the week
 #'   variation and "trend" to plot the trend by wind direction.
 #' @inheritDotParams openair::polarAnnulus -mydata -pollutant -period -limits
-#'   -type -cols -key -plot
+#'   -type -cols -key.position -plot
 #' @returns Either:
 #'
 #'  - *Dynamic:* A leaflet object
@@ -36,34 +37,41 @@
 #'   provider = "CartoDB.Voyager"
 #' )
 #' }
-annulusMap <- function(data,
-                       pollutant = NULL,
-                       period = "hour",
-                       limits = "free",
-                       latitude = NULL,
-                       longitude = NULL,
-                       crs = 4326,
-                       type = NULL,
-                       popup = NULL,
-                       label = NULL,
-                       provider = "OpenStreetMap",
-                       cols = "turbo",
-                       alpha = 1,
-                       key = FALSE,
-                       legend = TRUE,
-                       legend.position = NULL,
-                       legend.title = NULL,
-                       legend.title.autotext = TRUE,
-                       control.collapsed = FALSE,
-                       control.position = "topright",
-                       control.autotext = TRUE,
-                       d.icon = 200,
-                       d.fig = 3.5,
-                       static = FALSE,
-                       static.nrow = NULL,
-                       progress = TRUE,
-                       ...,
-                       control = NULL) {
+annulusMap <- function(
+  data,
+  pollutant = NULL,
+  period = "hour",
+  limits = "free",
+  latitude = NULL,
+  longitude = NULL,
+  crs = 4326,
+  type = NULL,
+  popup = NULL,
+  label = NULL,
+  provider = "OpenStreetMap",
+  cols = "turbo",
+  alpha = 1,
+  theme = NULL,
+  key.position = "none",
+  legend = TRUE,
+  legend.position = NULL,
+  legend.title = NULL,
+  legend.title.autotext = TRUE,
+  control.collapsed = FALSE,
+  control.position = "topright",
+  control.autotext = TRUE,
+  d.icon = 200,
+  d.fig = 3.5,
+  static = FALSE,
+  static.nrow = NULL,
+  progress = TRUE,
+  ...,
+  control = NULL
+) {
+  if (static) {
+    check_installed_static()
+  }
+
   # check basemap providers are valid
   provider <- check_providers(provider, static)
   legend.position <- check_legendposition(legend.position, static)
@@ -102,9 +110,9 @@ annulusMap <- function(data,
         ...
       )$data
 
-    theLimits <- range(testplots$z, na.rm = TRUE)
+    theLimits <- range(testplots$pred, na.rm = TRUE)
   } else if ("free" %in% limits) {
-    theLimits <- NA
+    theLimits <- NULL
   } else if (is.numeric(limits)) {
     theLimits <- limits
   } else {
@@ -156,40 +164,35 @@ annulusMap <- function(data,
     split_col <- "pollutant_name"
   }
 
+  # arguments for function
+  fun_args <- append(
+    list(
+      pollutant = "conc",
+      period = period,
+      plot = FALSE,
+      limits = theLimits,
+      cols = cols,
+      key.position = key.position
+    ),
+    rlang::list2(...)
+  )
+
   # define function
   fun <- function(data) {
-    if (!"free" %in% limits) {
-      openair::polarAnnulus(
-        data,
-        pollutant = "conc",
-        period = period,
-        plot = FALSE,
-        limits = theLimits,
-        cols = cols,
-        alpha = alpha,
-        key = key,
-        ...,
-        par.settings = list(axis.line = list(col = "transparent"))
-      )$plot
-    } else {
-      openair::polarAnnulus(
-        data,
-        pollutant = "conc",
-        period = period,
-        plot = FALSE,
-        cols = cols,
-        alpha = alpha,
-        key = key,
-        ...,
-        par.settings = list(axis.line = list(col = "transparent"))
-      )$plot
-    }
+    rlang::exec(
+      openair::polarAnnulus,
+      !!!append(
+        list(mydata = data),
+        fun_args
+      )
+    )
   }
 
   # plot and save static markers
   plots_df <-
     create_polar_markers(
       fun = fun,
+      fun_args = fun_args,
       data = data,
       latitude = latitude,
       longitude = longitude,
@@ -197,6 +200,7 @@ annulusMap <- function(data,
       d.fig = d.fig,
       popup = popup,
       label = label,
+      theme = theme,
       progress = progress
     )
 
@@ -213,11 +217,12 @@ annulusMap <- function(data,
         facet.nrow = static.nrow,
         d.icon = d.icon,
         crs = crs,
-        provider = provider
+        provider = provider,
+        alpha = alpha
       )
 
     # create colorbar if limits specified
-    if (!all(is.na(theLimits)) & legend) {
+    if (!all(is.na(theLimits)) && legend) {
       legend.title <-
         create_legend_title(
           static = static,
@@ -257,11 +262,12 @@ annulusMap <- function(data,
         split_col,
         control.collapsed,
         control.position,
-        control.autotext
+        control.autotext,
+        alpha
       )
 
     # add legend if limits are set
-    if (!all(is.na(theLimits)) & legend) {
+    if (!all(is.na(theLimits)) && legend) {
       legend.title <-
         create_legend_title(
           static = static,

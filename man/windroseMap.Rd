@@ -153,7 +153,7 @@ A value between 0 (fully transparent) and 1 (fully opaque).}
 
 A custom \code{ggplot2} theme to add to the polar markers. This should ideally
 be a partial theme (i.e., \code{\link[ggplot2:theme]{ggplot2::theme()}}) over a complete theme (e.g.,
-\code{\link[ggplot2:ggtheme]{ggplot2::theme_bw()}}) as other arguments like \code{key} interact with the plot
+\code{\link[ggplot2:theme_bw]{ggplot2::theme_bw()}}) as other arguments like \code{key} interact with the plot
 theme \emph{before} custom themes are set, so would be overriden by a complete
 theme.}
 
@@ -267,8 +267,12 @@ off, if desired.}
 \item{...}{
   Arguments passed on to \code{\link[openair:windRose]{openair::windRose}}
   \describe{
-    \item{\code{ws}}{Name of the column representing wind speed.}
-    \item{\code{wd}}{Name of the column representing wind direction.}
+    \item{\code{mydata}}{A data frame containing fields \code{ws} and \code{wd}}
+    \item{\code{ws}}{The name of the column in \code{mydata} representing the wind speed.
+Defaults to \code{"ws"}.}
+    \item{\code{wd}}{The name of the column in \code{mydata} representing the decimal wind
+direction, 0 to 360 where 0/360 are North and 180 is South. Defaults to
+\code{"wd"}.}
     \item{\code{ws2,wd2}}{The user can supply a second set of wind speed and wind
 direction values with which the first can be compared. See
 \code{\link[openair:pollutionRose]{pollutionRose()}} for more details.}
@@ -312,12 +316,6 @@ radial limits.}
 style spokes. If \code{FALSE} plots rose using 'wedge' style spokes.}
     \item{\code{key.title}}{Used to set the title of the legend. The legend title is
 passed to \code{\link[openair:quickText]{quickText()}} if \code{auto.text = TRUE}.}
-    \item{\code{strip.position}}{Location where the facet 'strips' are located when
-using \code{type}. When one \code{type} is provided, can be one of \code{"left"},
-\code{"right"}, \code{"bottom"} or \code{"top"}. When two \code{type}s are provided, this
-argument defines whether the strips are "switched" and can take either
-\code{"x"}, \code{"y"}, or \code{"both"}. For example, \code{"x"} will switch the 'top' strip
-locations to the bottom of the plot.}
     \item{\code{dig.lab}}{The number of significant figures at which scientific number
 formatting is used in break point and key labelling. Default 5.}
     \item{\code{include.lowest}}{Logical. If \code{FALSE} (the default), the first interval
@@ -334,6 +332,9 @@ each bin.}
     \item{\code{pollutant}}{Alternative data series to be sampled instead of wind speed.
 The \code{\link[openair:windRose]{windRose()}} default NULL is equivalent to \code{pollutant = "ws"}. Use in
 \code{\link[openair:pollutionRose]{pollutionRose()}}.}
+    \item{\code{annotate}}{If \code{TRUE} then the percentage calm and mean values are
+printed in each panel together with a description of the statistic below
+the plot. If \code{FALSE} then only the statistic will be printed.}
     \item{\code{angle.scale}}{In radial plots (e.g., \code{\link[openair:polarPlot]{polarPlot()}}), the radial scale is
 drawn directly on the plot itself. While suitable defaults have been
 chosen, sometimes the placement of the scale may interfere with an
@@ -341,6 +342,11 @@ interesting feature. \code{angle.scale} can take any value between \code{0} and 
 to place the scale at a different angle, or \code{FALSE} to move it to the side
 of the plots.}
     \item{\code{border}}{Border colour for shaded areas. Default is no border.}
+    \item{\code{plot}}{When \code{openair} plots are created they are automatically printed
+to the active graphics device. \code{plot = FALSE} deactivates this behaviour.
+This may be useful when the plot \emph{data} is of more interest, or the plot is
+required to appear later (e.g., later in a Quarto document, or to be saved
+to a file).}
     \item{\code{key}}{Deprecated; please use \code{key.position}. If \code{FALSE}, sets
 \code{key.position} to \code{"none"}.}
   }}
@@ -351,7 +357,7 @@ of the plots.}
 Either:
 \itemize{
 \item \emph{Dynamic:} A leaflet object
-\item \emph{Static:} A \code{ggplot2} object using \code{\link[ggplot2:ggsf]{ggplot2::coord_sf()}} coordinates with a \code{ggspatial} basemap
+\item \emph{Static:} A \code{ggplot2} object using \code{\link[ggplot2:coord_sf]{ggplot2::coord_sf()}} coordinates with a \code{ggspatial} basemap
 }
 }
 \description{
@@ -396,7 +402,7 @@ Legends can be removed using \code{ggplot2::theme(legend.position = "none")}, or
 further customised using \code{\link[ggplot2:guides]{ggplot2::guides()}} and either \code{color = ggplot2::guide_colourbar()} for continuous legends or \code{color = ggplot2::guide_legend()} for discrete legends.
 
 The extent of a map can be adjusted using the \code{xlim} and \code{ylim} arguments
-of \code{\link[ggplot2:ggsf]{ggplot2::coord_sf()}}.
+of \code{\link[ggplot2:coord_sf]{ggplot2::coord_sf()}}.
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{polarMap(polar_data, "no2", static = TRUE) +
     ggplot2::coord_sf(
@@ -416,12 +422,12 @@ windroseMap(polar_data,
 \seealso{
 \code{\link[openair:windRose]{openair::windRose()}}
 
-Other directional analysis maps: 
-\code{\link{annulusMap}()},
-\code{\link{diffMap}()},
-\code{\link{freqMap}()},
-\code{\link{percentileMap}()},
-\code{\link{polarMap}()},
-\code{\link{pollroseMap}()}
+Other directional analysis maps:
+\code{\link[=annulusMap]{annulusMap()}},
+\code{\link[=diffMap]{diffMap()}},
+\code{\link[=freqMap]{freqMap()}},
+\code{\link[=percentileMap]{percentileMap()}},
+\code{\link[=polarMap]{polarMap()}},
+\code{\link[=pollroseMap]{pollroseMap()}}
 }
 \concept{directional analysis maps}

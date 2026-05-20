@@ -1,3 +1,13 @@
+# openairmaps (development version)
+
+## New features
+
+* The entire `polarMap()` family now defaults to `annotate = FALSE`, which removes many of the "captions" added automatically since `{openair}` v.3.1.0. These can be restored by passing `annotate = TRUE` to `...`.
+
+* `trajLevelMap()` has gained `breaks` in line with `openair::trajLevel()`.
+
+* `trajMapStatic()` and `trajLevelMapStatic()` now call `openair::trajMap()` and `openair::trajLevel()`, respectively. This is an advancement towards complete removal, which will happen in a future version of `openairmaps`.
+
 # openairmaps 0.10.0
 
 ## Breaking Changes

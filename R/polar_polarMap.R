@@ -316,8 +316,7 @@
 #'
 #' @param control **Deprecated.** Please use `type`.
 #'
-#' @inheritDotParams openair::polarPlot -mydata -pollutant -x -limits -type
-#'   -cols -key.position -plot
+#' @inheritDotParams openair::polarPlot
 #'
 #' @returns Either:
 #'
@@ -502,6 +501,8 @@ polarMap <- function(
   }
 
   # arguments for function
+  dots <- rlang::list2(...)
+  dots$annotate <- dots$annotate %||% FALSE
   fun_args <- append(
     list(
       pollutant = funpoll,
@@ -512,7 +513,7 @@ polarMap <- function(
       cols = cols,
       key.position = key.position
     ),
-    rlang::list2(...)
+    dots
   )
 
   # define function

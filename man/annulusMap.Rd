@@ -176,7 +176,7 @@ A value between 0 (fully transparent) and 1 (fully opaque).}
 
 A custom \code{ggplot2} theme to add to the polar markers. This should ideally
 be a partial theme (i.e., \code{\link[ggplot2:theme]{ggplot2::theme()}}) over a complete theme (e.g.,
-\code{\link[ggplot2:ggtheme]{ggplot2::theme_bw()}}) as other arguments like \code{key} interact with the plot
+\code{\link[ggplot2:theme_bw]{ggplot2::theme_bw()}}) as other arguments like \code{key} interact with the plot
 theme \emph{before} custom themes are set, so would be overriden by a complete
 theme.}
 
@@ -290,6 +290,11 @@ off, if desired.}
 \item{...}{
   Arguments passed on to \code{\link[openair:polarAnnulus]{openair::polarAnnulus}}
   \describe{
+    \item{\code{mydata}}{A data frame minimally containing \code{date}, a wind direction and
+a pollutant.}
+    \item{\code{wd}}{The name of the column in \code{mydata} representing the decimal wind
+direction, 0 to 360 where 0/360 are North and 180 is South. Defaults to
+\code{"wd"}.}
     \item{\code{resolution}}{Two plot resolutions can be set: \dQuote{normal} and
 \dQuote{fine} (the default).}
     \item{\code{local.tz}}{Should the results be calculated in local time that includes
@@ -323,6 +328,24 @@ value is calculated in the wind speed, wind direction \sQuote{bins}. For
 this reason it can also be useful to set \code{min.bin} to ensure there are a
 sufficient number of points available to estimate a percentile. See
 \code{quantile} for more details of how percentiles are calculated.}
+    \item{\code{breaks}}{\code{breaks} bins a continuous axis into discrete bins. It can
+either take a single number (e.g., \code{breaks = 5}) to split the scale into
+quantiles, a vector of numbers (e.g., \verb{breaks = c(0, 50, 100, 200, 500}) to
+define specific break-points, or a named list. See \code{\link[openair:breakOpts]{breakOpts()}} for more
+details.}
+    \item{\code{trans}}{Should a transformation be applied to the colour scale? If the
+distribution of data is skewed, the default scale may be dominated by a few
+high values, so a log or square-root transform may mean the whole colour
+scale is better presented on the plot. Can be:
+\itemize{
+\item \code{FALSE}, which performs no transform.
+\item \code{TRUE}, which uses an appropriate transform for the plot type (usually
+\code{"log10"}).
+\item A \code{scales} 'transform' object (e.g., \code{\link[scales:transform_log10]{scales::transform_log10()}}).
+\item A character string corresponding to a \code{scales} transform function. Useful
+options include \code{"sqrt"}, \code{"log10"}, \code{"log2"}, \code{"log1p"}, \code{"pseudo_log"}
+and \code{"reverse"}.
+}}
     \item{\code{col.na}}{Colour to be used to show missing data.}
     \item{\code{offset}}{\code{offset} controls the size of the 'hole' in the middle and is
 expressed on a scale of \code{0} to \code{100}, where \code{0} is no hole and \code{100} is a
@@ -371,17 +394,16 @@ mean value. This is done \emph{after} fitting the smooth surface. This option is
 particularly useful if one is interested in the patterns of concentrations
 for several pollutants on different scales e.g. NOx and CO. Often useful if
 more than one \code{pollutant} is chosen.}
-    \item{\code{strip.position}}{Location where the facet 'strips' are located when
-using \code{type}. When one \code{type} is provided, can be one of \code{"left"},
-\code{"right"}, \code{"bottom"} or \code{"top"}. When two \code{type}s are provided, this
-argument defines whether the strips are "switched" and can take either
-\code{"x"}, \code{"y"}, or \code{"both"}. For example, \code{"x"} will switch the 'top' strip
-locations to the bottom of the plot.}
     \item{\code{key.title}}{Used to set the title of the legend. The legend title is
 passed to \code{\link[openair:quickText]{quickText()}} if \code{auto.text = TRUE}.}
     \item{\code{auto.text}}{Either \code{TRUE} (default) or \code{FALSE}. If \code{TRUE} titles and
 axis labels will automatically try and format pollutant names and units
 properly, e.g., by subscripting the "2" in "NO2". Passed to \code{\link[openair:quickText]{quickText()}}.}
+    \item{\code{plot}}{When \code{openair} plots are created they are automatically printed
+to the active graphics device. \code{plot = FALSE} deactivates this behaviour.
+This may be useful when the plot \emph{data} is of more interest, or the plot is
+required to appear later (e.g., later in a Quarto document, or to be saved
+to a file).}
     \item{\code{key}}{Deprecated; please use \code{key.position}. If \code{FALSE}, sets
 \code{key.position} to \code{"none"}.}
   }}
@@ -392,7 +414,7 @@ properly, e.g., by subscripting the "2" in "NO2". Passed to \code{\link[openair:
 Either:
 \itemize{
 \item \emph{Dynamic:} A leaflet object
-\item \emph{Static:} A \code{ggplot2} object using \code{\link[ggplot2:ggsf]{ggplot2::coord_sf()}} coordinates with a \code{ggspatial} basemap
+\item \emph{Static:} A \code{ggplot2} object using \code{\link[ggplot2:coord_sf]{ggplot2::coord_sf()}} coordinates with a \code{ggspatial} basemap
 }
 }
 \description{
@@ -438,7 +460,7 @@ Legends can be removed using \code{ggplot2::theme(legend.position = "none")}, or
 further customised using \code{\link[ggplot2:guides]{ggplot2::guides()}} and either \code{color = ggplot2::guide_colourbar()} for continuous legends or \code{color = ggplot2::guide_legend()} for discrete legends.
 
 The extent of a map can be adjusted using the \code{xlim} and \code{ylim} arguments
-of \code{\link[ggplot2:ggsf]{ggplot2::coord_sf()}}.
+of \code{\link[ggplot2:coord_sf]{ggplot2::coord_sf()}}.
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{polarMap(polar_data, "no2", static = TRUE) +
     ggplot2::coord_sf(
@@ -460,12 +482,12 @@ annulusMap(polar_data,
 \seealso{
 \code{\link[openair:polarAnnulus]{openair::polarAnnulus()}}
 
-Other directional analysis maps: 
-\code{\link{diffMap}()},
-\code{\link{freqMap}()},
-\code{\link{percentileMap}()},
-\code{\link{polarMap}()},
-\code{\link{pollroseMap}()},
-\code{\link{windroseMap}()}
+Other directional analysis maps:
+\code{\link[=diffMap]{diffMap()}},
+\code{\link[=freqMap]{freqMap()}},
+\code{\link[=percentileMap]{percentileMap()}},
+\code{\link[=polarMap]{polarMap()}},
+\code{\link[=pollroseMap]{pollroseMap()}},
+\code{\link[=windroseMap]{windroseMap()}}
 }
 \concept{directional analysis maps}

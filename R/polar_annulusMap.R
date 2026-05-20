@@ -19,8 +19,7 @@
 #'   Options are "hour" (the default, to plot diurnal variations), "season" to
 #'   plot variation throughout the year, "weekday" to plot day of the week
 #'   variation and "trend" to plot the trend by wind direction.
-#' @inheritDotParams openair::polarAnnulus -mydata -pollutant -period -limits
-#'   -type -cols -key.position -plot
+#' @inheritDotParams openair::polarAnnulus
 #' @returns Either:
 #'
 #'  - *Dynamic:* A leaflet object
@@ -165,6 +164,8 @@ annulusMap <- function(
   }
 
   # arguments for function
+  dots <- rlang::list2(...)
+  dots$annotate <- dots$annotate %||% FALSE
   fun_args <- append(
     list(
       pollutant = "conc",
@@ -174,7 +175,7 @@ annulusMap <- function(
       cols = cols,
       key.position = key.position
     ),
-    rlang::list2(...)
+    dots
   )
 
   # define function

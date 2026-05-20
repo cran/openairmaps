@@ -29,8 +29,7 @@
 #' - `"free"` which allows all of the markers to use different radial axis scales.
 #' - A numeric vector defining a sequence of numbers to use as the intervals, e.g., `intervals = c(0, 10, 30, 50)`.
 #'
-#' @inheritDotParams openair::percentileRose -mydata -pollutant -percentile
-#'   -type -cols -key -plot -intervals
+#' @inheritDotParams openair::percentileRose
 #' @returns Either:
 #'
 #'  - *Dynamic:* A leaflet object
@@ -180,6 +179,8 @@ percentileMap <- function(
   }
 
   # arguments for function
+  dots <- rlang::list2(...)
+  dots$annotate <- dots$annotate %||% FALSE
   fun_args <- append(
     list(
       pollutant = "conc",
@@ -189,7 +190,7 @@ percentileMap <- function(
       key.position = key.position,
       intervals = theIntervals
     ),
-    rlang::list2(...)
+    dots
   )
 
   # define function

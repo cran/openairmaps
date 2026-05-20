@@ -44,7 +44,7 @@ Column names representing the decimal latitude and longitude.}
 
 This column may be numeric, character, factor or date(time). This will
 commonly be a pollutant concentration which has been joined (e.g., by
-\code{\link[dplyr:mutate-joins]{dplyr::left_join()}}) to the trajectory data by "date".}
+\code{\link[dplyr:left_join]{dplyr::left_join()}}) to the trajectory data by "date".}
 
 \item{type}{\emph{A method to condition the \code{data} for separate plotting.}
 
@@ -141,6 +141,8 @@ rather than overwriting \code{nox}.}
     \item{\code{hemisphere}}{Can be \code{"northern"} or \code{"southern"}, used to split data
 into seasons.}
     \item{\code{n.levels}}{Number of quantiles to split numeric data into.}
+    \item{\code{wd.res}}{The number of wind direction bins; one of \code{4} (N/E/S/W), \code{8}
+(N/NE/E/SE/etc., the default) or \code{16} (N/NNE/NE/ENE/etc.).}
     \item{\code{start.day}}{What day of the week should the \code{type = "weekday"} start on?
 The user can change the start day by supplying an integer between 0 and 6.
 Sunday = 0, Monday = 1, ... For example to start the weekday plots on a
@@ -197,7 +199,7 @@ trajMap(traj_data, colour = "pm10")
 
 \code{\link[=trajMapStatic]{trajMapStatic()}} for the static \code{ggplot2} equivalent of \code{\link[=trajMap]{trajMap()}}
 
-Other interactive trajectory maps: 
-\code{\link{trajLevelMap}()}
+Other interactive trajectory maps:
+\code{\link[=trajLevelMap]{trajLevelMap()}}
 }
 \concept{interactive trajectory maps}
